@@ -143,6 +143,18 @@ npm run start:auth
 npm run start:transfer
 ```
 
+```bash
+# Terminal 3 (UI playground)
+npm run start:ui
+```
+
+UI URL: `http://localhost:4173`
+
+Use the UI to run auth and transfer endpoints quickly:
+- Set API targets at the top of the page (defaults are prefilled).
+- Login stores access/refresh tokens in browser storage.
+- Transfer requests automatically use the current bearer token.
+
 ## Production Security Settings
 
 - Set `NODE_ENV=production` in each service.

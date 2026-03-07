@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OMT Control Deck</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+    <div class="noise"></div>
+    <main class="shell">
+      <header class="hero reveal">
+        <p class="kicker">OMT v2</p>
+        <h1>Service Control Deck</h1>
+        <p class="subtitle">Run and inspect auth + transfer features from one interface.</p>
+        <div class="token-badge" id="tokenStatus">Session: no token</div>
+      </header>
+
+      <section class="panel settings reveal delay-1">
+        <h2>API Targets</h2>
+        <div class="settings-grid">
+          <label>
+            <span>Auth Base URL</span>
+            <input id="authBaseUrl" type="url" placeholder="http://localhost:3001" />
+          </label>
+          <label>
+            <span>Transfer Base URL</span>
+            <input id="transferBaseUrl" type="url" placeholder="http://localhost:3002/api/v1" />
+          </label>
+        </div>
+        <div class="button-row">
+          <button id="saveSettings" class="btn btn-primary" type="button">Save Targets</button>
+          <button id="clearSession" class="btn btn-secondary" type="button">Clear Session</button>
+        </div>
+      </section>
+
+      <section class="panel reveal delay-2">
+        <h2>Auth Flows</h2>
+        <div class="card-grid">
+          <form id="registerForm" class="card">
+            <h3>Register</h3>
+            <label><span>Phone</span><input name="phone" required placeholder="+9613123456" /></label>
+            <label><span>Email (optional)</span><input name="email" type="email" placeholder="user@example.com" /></label>
+            <label><span>Password</span><input name="password" type="password" required placeholder="Password@123" /></label>
+            <button class="btn btn-primary" type="submit">POST /auth/register</button>
+          </form>
+
+          <form id="verifyEmailForm" class="card">
+            <h3>Verify Email</h3>
+            <label><span>Email</span><input name="email" type="email" required /></label>
+            <label><span>OTP</span><input name="otp" required maxlength="6" placeholder="123456" /></label>
+            <button class="btn btn-primary" type="submit">POST /auth/verify-email</button>
+          </form>
+
+          <form id="resendOtpForm" class="card">
+            <h3>Resend OTP</h3>
+            <label><span>Email</span><input name="email" type="email" required /></label>
+            <button class="btn btn-primary" type="submit">POST /auth/resend-otp</button>
+          </form>
+
+          <form id="loginForm" class="card">
+            <h3>Login</h3>
+            <label><span>Phone</span><input name="phone" required placeholder="+9613123456" /></label>
+            <label><span>Password</span><input name="password" type="password" required /></label>
+            <button class="btn btn-primary" type="submit">POST /auth/login</button>
+          </form>
+
+          <form id="refreshForm" class="card">
+            <h3>Refresh Token</h3>
+            <label><span>Refresh Token</span><textarea name="refreshToken" rows="3"></textarea></label>
+            <button class="btn btn-primary" type="submit">POST /auth/refresh</button>
+          </form>
+
+          <form id="logoutForm" class="card">
+            <h3>Logout</h3>
+            <p class="meta">Uses current access token.</p>
+            <button class="btn btn-secondary" type="submit">POST /auth/logout</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel reveal delay-3">
+        <h2>Transfer Flows</h2>
+        <p class="meta">All transfer endpoints use the current access token.</p>
+        <div class="card-grid">
+          <form id="createTransferForm" class="card">
+            <h3>Create Transfer</h3>
+            <label><span>Receiver Phone</span><input name="receiverPhone" required placeholder="+96170123456" /></label>
+            <label><span>Receiver Name</span><input name="receiverName" required /></label>
+            <label><span>Amount</span><input name="amount" type="number" min="1" step="0.01" required /></label>
+            <label>
+              <span>Currency</span>
+              <select name="currency">
+                <option>USD</option>
+                <option>LBP</option>
+                <option>EUR</option>
+              </select>
+            </label>
+            <label>
+              <span>Type</span>
+              <select name="type">
+                <option>DOMESTIC</option>
+                <option>INTERNATIONAL</option>
+                <option>WALLET</option>
+              </select>
+            </label>
+            <label><span>Note (optional)</span><input name="note" /></label>
+            <button class="btn btn-primary" type="submit">POST /transfers</button>
+          </form>
+
+          <form id="listTransfersForm" class="card">
+            <h3>List Transfers</h3>
+            <label><span>Page</span><input name="page" type="number" min="1" value="1" /></label>
+            <label><span>Limit</span><input name="limit" type="number" min="1" value="20" /></label>
+            <button class="btn btn-primary" type="submit">GET /transfers</button>
+          </form>
+
+          <form id="getTransferForm" class="card">
+            <h3>Get By Reference</h3>
+            <label><span>Reference</span><input name="reference" required placeholder="OMT-2024-XXXXXX" /></label>
+            <button class="btn btn-primary" type="submit">GET /transfers/:reference</button>
+          </form>
+
+          <form id="cancelTransferForm" class="card">
+            <h3>Cancel Transfer</h3>
+            <label><span>Transfer ID</span><input name="id" required placeholder="uuid" /></label>
+            <button class="btn btn-secondary" type="submit">PATCH /transfers/:id/cancel</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel reveal delay-4">
+        <h2>Response Console</h2>
+        <pre id="responseBox">Ready.</pre>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

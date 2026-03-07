@@ -124,6 +124,7 @@ export class AuthService {
   }
 
   async logout(userId: string) {
+    if (!userId) throw new UnauthorizedException('Unauthorized');
     await this.userRepo.update(userId, { refreshTokenHash: undefined as any });
     return { message: 'Logged out successfully' };
   }

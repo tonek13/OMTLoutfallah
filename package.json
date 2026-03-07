@@ -8,6 +8,7 @@
     "start:transfer": "nest start transfer-service --watch",
     "start:notification": "nest start notification-service --watch",
     "start:audit": "nest start audit-service --watch",
+    "start:ui": "node apps/ui/server.js",
     "build:all": "nest build auth-service && nest build user-service && nest build transfer-service",
     "test": "jest",
     "test:e2e": "jest --config ./test/jest-e2e.json",
