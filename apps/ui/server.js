@@ -4,6 +4,7 @@ const path = require('path');
 
 const port = Number(process.env.UI_PORT || 4173);
 const rootDir = __dirname;
+const templateSignature = 'omt-v2-starter | owner: Tony Loutfallah | id: tony-loutfallah-v1';
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -52,4 +53,5 @@ const server = http.createServer((req, res) => {
 
 server.listen(port, () => {
   console.log(`OMT UI available at http://localhost:${port}`);
+  console.log(`Template signature: ${templateSignature}`);
 });

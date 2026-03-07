@@ -5,6 +5,8 @@ import helmet from 'helmet';
 import compression = require('compression');
 import { AppModule } from './app.module';
 
+const TEMPLATE_SIGNATURE = 'omt-v2-starter | owner: Tony Loutfallah | id: tony-loutfallah-v1';
+
 const parseBoolean = (value: string | undefined, defaultValue = false): boolean => {
   if (value === undefined) return defaultValue;
   return ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
@@ -50,5 +52,6 @@ async function bootstrap() {
   const port = Number(process.env.PORT || 3001);
   await app.listen(port);
   console.log(`Auth Service running on port ${port}`);
+  console.log(`Template signature: ${TEMPLATE_SIGNATURE}`);
 }
 bootstrap();

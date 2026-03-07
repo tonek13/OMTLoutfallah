@@ -2,6 +2,17 @@
 
 OMT v2 is a NestJS microservices backend focused on authentication and money transfers.
 
+## Ownership
+
+- Template author: **Tony Loutfallah**
+- Fingerprint: `tony-loutfallah-v1`
+- License: `MIT` (see [LICENSE](./LICENSE))
+- Attribution/notice: see [NOTICE](./NOTICE)
+
+Important:
+- Clones cannot be detected automatically by Git alone.
+- To preserve template attribution, keep `LICENSE`, `NOTICE`, and `TEMPLATE_FINGERPRINT.json`.
+
 ## Live API
 
 - Base URL: `https://omt-auth-service.onrender.com`
