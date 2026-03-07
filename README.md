@@ -155,3 +155,6 @@ npm run start:transfer
 
 - `user-service`, `notification-service`, and `audit-service` are scaffolded but not runnable yet.
 - `docker-compose.yml` defines app containers for all services, but only `apps/auth-service/Dockerfile` exists at the moment.
+- In the current free Render dev environment, email verification is not reliable for external recipients:
+  - outbound SMTP ports are restricted on free instances,
+  - and Resend test mode can only send to the account owner's email until a custom domain is verified.
