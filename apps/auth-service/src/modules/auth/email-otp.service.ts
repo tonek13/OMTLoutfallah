@@ -11,10 +11,14 @@ export class EmailOtpService implements OnModuleInit {
     private redis: Redis;
     private readonly smtpHost = 'smtp.gmail.com';
     private smtpCandidates: string[] = [];
+    private resendApiKey?: string;
+    private resendFromEmail?: string;
     private gmailUser?: string;
     private gmailPassword?: string;
 
     constructor(private config: ConfigService) {
+        this.resendApiKey = this.config.get<string>('RESEND_API_KEY');
+        this.resendFromEmail = this.config.get<string>('RESEND_FROM_EMAIL');
         this.gmailUser = this.config.get<string>('GMAIL_USER');
         this.gmailPassword = this.config.get<string>('GMAIL_APP_PASSWORD');
 
@@ -25,9 +29,14 @@ export class EmailOtpService implements OnModuleInit {
     }
 
     async onModuleInit(): Promise<void> {
-        if (!this.gmailUser || !this.gmailPassword) {
+        if (this.isResendConfigured()) {
+            this.logger.log('Email OTP provider: Resend API');
+            return;
+        }
+
+        if (!this.isSmtpConfigured()) {
             this.logger.warn(
-                'Email OTP transport is disabled because GMAIL_USER or GMAIL_APP_PASSWORD is missing.',
+                'Email OTP transport is disabled because no email provider is configured.',
             );
             return;
         }
@@ -45,13 +54,8 @@ export class EmailOtpService implements OnModuleInit {
     }
 
     async sendOtp(email: string): Promise<void> {
-        if (!this.gmailUser || !this.gmailPassword) {
+        if (!this.isResendConfigured() && !this.isSmtpConfigured()) {
             throw new InternalServerErrorException('Email service is not configured.');
-        }
-
-        if (!this.transporter) {
-            await this.loadSmtpCandidates();
-            this.buildTransport(this.smtpCandidates[0]);
         }
 
         const otp = this.generateOtp();
@@ -60,7 +64,15 @@ export class EmailOtpService implements OnModuleInit {
         await this.redis.setex(key, 600, otp);
 
         try {
-            await this.sendWithFailover(email, otp);
+            if (this.isResendConfigured()) {
+                await this.sendWithResend(email, otp);
+            } else {
+                if (!this.transporter) {
+                    await this.loadSmtpCandidates();
+                    this.buildTransport(this.smtpCandidates[0]);
+                }
+                await this.sendWithSmtpFailover(email, otp);
+            }
             this.logger.log(`OTP sent to ${email}`);
         } catch (err) {
             await this.redis.del(key);
@@ -82,7 +94,28 @@ export class EmailOtpService implements OnModuleInit {
         return Math.floor(100000 + Math.random() * 900000).toString();
     }
 
-    private async sendWithFailover(email: string, otp: string): Promise<void> {
+    private async sendWithResend(email: string, otp: string): Promise<void> {
+        const response = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${this.resendApiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                from: this.resendFromEmail,
+                to: [email],
+                subject: 'Your OMT Verification Code',
+                html: this.emailTemplate(otp),
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Resend API ${response.status}: ${errorText}`);
+        }
+    }
+
+    private async sendWithSmtpFailover(email: string, otp: string): Promise<void> {
         const errors: string[] = [];
 
         for (const candidate of this.smtpCandidates) {
@@ -104,6 +137,14 @@ export class EmailOtpService implements OnModuleInit {
         }
 
         throw new Error(errors.join(' | '));
+    }
+
+    private isResendConfigured(): boolean {
+        return Boolean(this.resendApiKey && this.resendFromEmail);
+    }
+
+    private isSmtpConfigured(): boolean {
+        return Boolean(this.gmailUser && this.gmailPassword);
     }
 
     private async loadSmtpCandidates(): Promise<void> {

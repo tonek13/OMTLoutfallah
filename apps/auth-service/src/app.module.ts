@@ -29,16 +29,10 @@ const parseBoolean = (value: string | undefined, defaultValue = false): boolean 
         JWT_REFRESH_SECRET: Joi.string().min(32).required(),
         REDIS_HOST: Joi.string().required(),
         REDIS_PORT: Joi.number().integer().min(1).max(65535).default(6379),
-        GMAIL_USER: Joi.string().email().when('NODE_ENV', {
-          is: 'production',
-          then: Joi.required(),
-          otherwise: Joi.optional(),
-        }),
-        GMAIL_APP_PASSWORD: Joi.string().min(8).when('NODE_ENV', {
-          is: 'production',
-          then: Joi.required(),
-          otherwise: Joi.optional(),
-        }),
+        RESEND_API_KEY: Joi.string().optional(),
+        RESEND_FROM_EMAIL: Joi.string().optional(),
+        GMAIL_USER: Joi.string().email().optional(),
+        GMAIL_APP_PASSWORD: Joi.string().min(8).optional(),
         ALLOWED_ORIGINS: Joi.string().when('NODE_ENV', {
           is: 'production',
           then: Joi.required(),
@@ -47,7 +41,22 @@ const parseBoolean = (value: string | undefined, defaultValue = false): boolean 
         ENABLE_SWAGGER: Joi.string().valid('true', 'false', '1', '0').default('false'),
         TYPEORM_SYNCHRONIZE: Joi.string().valid('true', 'false', '1', '0').default('false'),
         TYPEORM_LOGGING: Joi.string().valid('true', 'false', '1', '0').default('false'),
-      }).or('DB_PASSWORD', 'DB_PASS'),
+      })
+        .or('DB_PASSWORD', 'DB_PASS')
+        .custom((value, helpers) => {
+          if (value.NODE_ENV !== 'production') return value;
+
+          const hasResend = Boolean(value.RESEND_API_KEY && value.RESEND_FROM_EMAIL);
+          const hasGmail = Boolean(value.GMAIL_USER && value.GMAIL_APP_PASSWORD);
+
+          if (!hasResend && !hasGmail) {
+            return helpers.message({
+              custom: 'In production, configure either RESEND_API_KEY + RESEND_FROM_EMAIL, or GMAIL_USER + GMAIL_APP_PASSWORD.',
+            });
+          }
+
+          return value;
+        }),
       validationOptions: {
         allowUnknown: true,
       },

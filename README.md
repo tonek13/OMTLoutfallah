@@ -104,9 +104,9 @@ Copy-Item apps/transfer-service/.env.example apps/transfer-service/.env
 
 Important notes:
 
-- `auth-service` also needs email OTP variables:
-  - `GMAIL_USER`
-  - `GMAIL_APP_PASSWORD`
+- `auth-service` email OTP provider (production):
+  - Recommended on Render free tier: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`
+  - SMTP fallback: `GMAIL_USER`, `GMAIL_APP_PASSWORD`
 - `transfer-service` uses `DB_PASSWORD` (or legacy `DB_PASS`); if you use the provided Docker PostgreSQL, set:
   - `DB_HOST=localhost`
   - `DB_PORT=5432`
