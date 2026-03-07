@@ -184,6 +184,29 @@ textarea {
   font-size: 0.82rem;
 }
 
+.transfer-panel label span,
+.transfer-panel input,
+.transfer-panel select,
+.transfer-panel textarea {
+  font-weight: 700;
+}
+
+.transfer-panel.is-disabled .card {
+  opacity: 0.62;
+}
+
+.transfer-panel.is-disabled input,
+.transfer-panel.is-disabled select,
+.transfer-panel.is-disabled textarea,
+.transfer-panel.is-disabled button {
+  cursor: not-allowed;
+}
+
+.disabled-note {
+  color: var(--danger);
+  font-weight: 700;
+}
+
 .button-row {
   display: flex;
   flex-wrap: wrap;

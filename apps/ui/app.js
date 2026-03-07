@@ -297,6 +297,16 @@ const initialize = () => {
       });
     }),
   );
+
+  const transferPanel = document.querySelector('.transfer-panel');
+  if (transferPanel) {
+    transferPanel.classList.add('is-disabled');
+    transferPanel
+      .querySelectorAll('input, select, textarea, button')
+      .forEach((element) => {
+        element.disabled = true;
+      });
+  }
 };
 
 initialize();

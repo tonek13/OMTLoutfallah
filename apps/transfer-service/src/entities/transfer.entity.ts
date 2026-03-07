@@ -36,7 +36,6 @@ export class Transfer {
   senderId: string;
 
   @Column({ type: 'varchar', length: 20 })
-  @Index()
   receiverPhone: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })

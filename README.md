@@ -22,7 +22,7 @@ OMT v2 is a NestJS microservices backend focused on authentication and money tra
 
 ### Auth Service (`apps/auth-service`)
 
-- User registration with phone and optional email.
+- User registration with phone and required email.
 - Password hashing with `bcrypt` (12 rounds).
 - Email OTP verification flow with Redis-backed code storage (10 min expiry).
 - Login with account lockout after 5 failed attempts (30 minutes).

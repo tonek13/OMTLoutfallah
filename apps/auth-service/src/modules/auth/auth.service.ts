@@ -26,32 +26,28 @@ export class AuthService {
 
   async register(dto: RegisterDto, ip: string) {
     const normalizedEmail = dto.email?.trim().toLowerCase();
+    if (!normalizedEmail) throw new BadRequestException('Email is required');
+
     const exists = await this.userRepo.findOne({ where: { phone: dto.phone } });
     if (exists) throw new ConflictException('Phone already registered');
 
-    if (normalizedEmail) {
-      const emailExists = await this.userRepo.findOne({ where: { email: normalizedEmail } });
-      if (emailExists) throw new ConflictException('Email already registered');
-    }
+    const emailExists = await this.userRepo.findOne({ where: { email: normalizedEmail } });
+    if (emailExists) throw new ConflictException('Email already registered');
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
     const user = this.userRepo.create({ ...dto, email: normalizedEmail, passwordHash });
     await this.userRepo.save(user);
 
-    if (normalizedEmail) {
-      try {
-        await this.emailOtpService.sendOtp(normalizedEmail);
-        return {
-          message: 'Registration successful. A verification code has been sent to your email.',
-          emailVerificationRequired: true,
-        };
-      } catch (error) {
-        await this.userRepo.delete(user.id);
-        throw error;
-      }
+    try {
+      await this.emailOtpService.sendOtp(normalizedEmail);
+      return {
+        message: 'Registration successful. A verification code has been sent to your email.',
+        emailVerificationRequired: true,
+      };
+    } catch (error) {
+      await this.userRepo.delete(user.id);
+      throw error;
     }
-
-    return { message: 'Registration successful.' };
   }
 
   async verifyEmail(dto: VerifyEmailDto) {

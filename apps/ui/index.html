@@ -48,7 +48,7 @@
           <form id="registerForm" class="card">
             <h3>Register</h3>
             <label><span>Phone</span><input name="phone" required placeholder="+9613123456" /></label>
-            <label><span>Email (optional)</span><input name="email" type="email" placeholder="user@example.com" /></label>
+            <label><span>Email</span><input name="email" type="email" required placeholder="user@example.com" /></label>
             <label><span>Password</span><input name="password" type="password" required placeholder="Password@123" /></label>
             <button class="btn btn-primary" type="submit">POST /auth/register</button>
           </form>
@@ -87,9 +87,10 @@
         </div>
       </section>
 
-      <section class="panel reveal delay-3">
+      <section class="panel transfer-panel reveal delay-3">
         <h2>Transfer Flows</h2>
         <p class="meta">All transfer endpoints use the current access token.</p>
+        <p class="meta disabled-note">Transfer actions are currently disabled in this UI.</p>
         <div class="card-grid">
           <form id="createTransferForm" class="card">
             <h3>Create Transfer</h3>
