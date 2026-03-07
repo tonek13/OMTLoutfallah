@@ -1,10 +1,10 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { Transfer } from './entities/transfer.entity';
-import { TransferService } from './transfer/transfer.service';
-import { TransferController } from './transfer/transfer.controller';
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { ThrottlerModule } from "@nestjs/throttler";
+import { Transfer } from "./entities/transfer.entity";
+import { TransferService } from "./transfer/transfer.service";
+import { TransferController } from "./transfer/transfer.controller";
 
 @Module({
   imports: [
@@ -13,15 +13,15 @@ import { TransferController } from './transfer/transfer.controller';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        host: config.get('DB_HOST'),
-        port: config.get<number>('DB_PORT', 5432),
-        username: config.get('DB_USER'),
-        password: config.get('DB_PASS'),
-        database: config.get('DB_NAME'),
+        type: "postgres",
+        host: config.get("DB_HOST"),
+        port: config.get<number>("DB_PORT", 5432),
+        username: config.get("DB_USER"),
+        password: config.get("DB_PASS"),
+        database: config.get("DB_NAME"),
         entities: [Transfer],
-        synchronize: config.get('NODE_ENV') !== 'production',
-        logging: config.get('NODE_ENV') === 'development',
+        synchronize: config.get("NODE_ENV") !== "production",
+        logging: config.get("NODE_ENV") === "development",
       }),
       inject: [ConfigService],
     }),

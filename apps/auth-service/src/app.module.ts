@@ -7,30 +7,34 @@ import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
-    // Config
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: 'apps/auth-service/.env',
     }),
 
-    // Rate limiting — critical for auth endpoints
     ThrottlerModule.forRoot([
-      { name: 'short',  ttl: 1000,  limit: 3   },  // 3 req/sec
-      { name: 'medium', ttl: 10000, limit: 20  },  // 20 req/10sec
-      { name: 'long',   ttl: 60000, limit: 100 },  // 100 req/min
+      { name: 'short',  ttl: 1000,  limit: 3   }, 
+      { name: 'medium', ttl: 10000, limit: 20  },  
+      { name: 'long',   ttl: 60000, limit: 100 }, 
     ]),
 
     // Database
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'omt_user',
-      password: 'omt_password',
-      database: 'omt_db',
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true,
-      logging: true,
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        host: config.get<string>('DB_HOST', 'localhost'),
+        port: config.get<number>('DB_PORT', 5432),
+        username: config.get<string>('DB_USER', 'omt_user'),
+        password:
+          config.get<string>('DB_PASSWORD') ??
+          config.get<string>('DB_PASS', 'omt_password'),
+        database: config.get<string>('DB_NAME', 'omt_db'),
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        synchronize: config.get('NODE_ENV') !== 'production',
+        logging: config.get('NODE_ENV') === 'development',
+      }),
+      inject: [ConfigService],
     }),
 
     AuthModule,
