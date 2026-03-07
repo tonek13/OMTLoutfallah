@@ -7,7 +7,7 @@ OMT v2 is a NestJS microservices backend focused on authentication and money tra
 | Service                | Port   | Status                | Notes                                                                    |
 | ---------------------- | ------ | --------------------- | ------------------------------------------------------------------------ |
 | `auth-service`         | `3001` | Implemented           | Running API with Swagger, JWT auth, email OTP, PostgreSQL, rate limiting |
-| `transfer-service`     | `3002` | Partially implemented | API/controllers/entities exist, but current build has a TypeScript error |
+| `transfer-service`     | `3002` | Implemented | API/controllers/entities and JWT validation are in place |
 | `user-service`         | `3003` | Scaffold only         | No runnable service entrypoint yet                                       |
 | `notification-service` | `3004` | Scaffold only         | No runnable service entrypoint yet                                       |
 | `audit-service`        | `3005` | Scaffold only         | No runnable service entrypoint yet                                       |
@@ -73,7 +73,7 @@ Base prefix is `api/v1`, so endpoints are:
 | `GET`   | `/api/v1/transfers/:reference` | Get transfer by reference |
 | `PATCH` | `/api/v1/transfers/:id/cancel` | Cancel pending transfer   |
 
-Swagger: `http://localhost:3002/api/docs` (after transfer build issue is fixed)
+Swagger: `http://localhost:3002/api/docs`
 
 ## Prerequisites
 
@@ -102,11 +102,11 @@ Important notes:
 - `auth-service` also needs email OTP variables:
   - `GMAIL_USER`
   - `GMAIL_APP_PASSWORD`
-- `transfer-service` uses `DB_PASS`; if you use the provided Docker PostgreSQL, set:
+- `transfer-service` uses `DB_PASSWORD` (or legacy `DB_PASS`); if you use the provided Docker PostgreSQL, set:
   - `DB_HOST=localhost`
   - `DB_PORT=5432`
   - `DB_USER=omt_user`
-  - `DB_PASS=omt_password`
+  - `DB_PASSWORD=omt_password`
   - `DB_NAME=omt_db`
 - `JWT_SECRET` in `transfer-service` must match `auth-service` so bearer tokens can be validated consistently.
 
@@ -138,8 +138,15 @@ npm run start:auth
 npm run start:transfer
 ```
 
+## Production Security Settings
+
+- Set `NODE_ENV=production` in each service.
+- Set `TYPEORM_SYNCHRONIZE=false` (default in the templates).
+- Set `ENABLE_SWAGGER=false` (default behavior in production unless explicitly enabled).
+- Set strict `ALLOWED_ORIGINS` (comma-separated), never `*` in production.
+- Use strong secrets (`JWT_SECRET`, `JWT_REFRESH_SECRET`) with at least 32 characters.
+
 ## Known Gaps Right Now
 
-- `transfer-service` currently fails to compile due to a TypeScript typing error.
 - `user-service`, `notification-service`, and `audit-service` are scaffolded but not runnable yet.
 - `docker-compose.yml` defines app containers for all services, but only `apps/auth-service/Dockerfile` exists at the moment.

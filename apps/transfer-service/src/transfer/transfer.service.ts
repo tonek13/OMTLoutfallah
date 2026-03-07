@@ -62,7 +62,7 @@ export class TransferService {
         referenceCode: this.generateReferenceCode(),
         status: isFlagged ? TransferStatus.PENDING : TransferStatus.PROCESSING,
         isFlagged,
-        flagReason: isFlagged ? 'Automated fraud flag - manual review required' : null,
+        flagReason: isFlagged ? 'Automated fraud flag - manual review required' : undefined,
       });
 
       await queryRunner.manager.save(transfer);
