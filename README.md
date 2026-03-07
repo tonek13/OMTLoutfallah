@@ -2,6 +2,11 @@
 
 OMT v2 is a NestJS microservices backend focused on authentication and money transfers.
 
+## Live API
+
+- Base URL: `https://omt-auth-service.onrender.com`
+- Swagger Docs: `https://omt-auth-service.onrender.com/api/docs#/`
+
 ## Current Repository Status
 
 | Service                | Port   | Status                | Notes                                                                    |
