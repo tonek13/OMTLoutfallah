@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: omt-postgres
+    environment:
+      POSTGRES_USER: omt_user
+      POSTGRES_PASSWORD: omt_password
+      POSTGRES_DB: omt_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - omt-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: omt-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - omt-network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: omt-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - omt-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: omt-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - '9092:9092'
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - omt-network
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: apps/auth-service/Dockerfile
+    container_name: omt-auth
+    ports:
+      - '3001:3001'
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - omt-network
+
+  transfer-service:
+    build:
+      context: .
+      dockerfile: apps/transfer-service/Dockerfile
+    container_name: omt-transfer
+    ports:
+      - '3002:3002'
+    depends_on:
+      - postgres
+      - kafka
+    networks:
+      - omt-network
+
+  user-service:
+    build:
+      context: .
+      dockerfile: apps/user-service/Dockerfile
+    container_name: omt-user
+    ports:
+      - '3003:3003'
+    depends_on:
+      - postgres
+    networks:
+      - omt-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: apps/notification-service/Dockerfile
+    container_name: omt-notification
+    ports:
+      - '3004:3004'
+    depends_on:
+      - kafka
+    networks:
+      - omt-network
+
+  audit-service:
+    build:
+      context: .
+      dockerfile: apps/audit-service/Dockerfile
+    container_name: omt-audit
+    ports:
+      - '3005:3005'
+    depends_on:
+      - postgres
+      - kafka
+    networks:
+      - omt-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  omt-network:
+    driver: bridge
