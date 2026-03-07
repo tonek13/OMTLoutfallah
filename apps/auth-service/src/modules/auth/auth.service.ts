@@ -25,35 +25,42 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto, ip: string) {
+    const normalizedEmail = dto.email?.trim().toLowerCase();
     const exists = await this.userRepo.findOne({ where: { phone: dto.phone } });
     if (exists) throw new ConflictException('Phone already registered');
 
-    if (dto.email) {
-      const emailExists = await this.userRepo.findOne({ where: { email: dto.email } });
+    if (normalizedEmail) {
+      const emailExists = await this.userRepo.findOne({ where: { email: normalizedEmail } });
       if (emailExists) throw new ConflictException('Email already registered');
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
-    const user = this.userRepo.create({ ...dto, passwordHash });
+    const user = this.userRepo.create({ ...dto, email: normalizedEmail, passwordHash });
     await this.userRepo.save(user);
 
-    if (dto.email) {
-      await this.emailOtpService.sendOtp(dto.email);
-      return {
-        message: 'Registration successful. A verification code has been sent to your email.',
-        emailVerificationRequired: true,
-      };
+    if (normalizedEmail) {
+      try {
+        await this.emailOtpService.sendOtp(normalizedEmail);
+        return {
+          message: 'Registration successful. A verification code has been sent to your email.',
+          emailVerificationRequired: true,
+        };
+      } catch (error) {
+        await this.userRepo.delete(user.id);
+        throw error;
+      }
     }
 
     return { message: 'Registration successful.' };
   }
 
   async verifyEmail(dto: VerifyEmailDto) {
-    const user = await this.userRepo.findOne({ where: { email: dto.email } });
+    const email = dto.email.trim().toLowerCase();
+    const user = await this.userRepo.findOne({ where: { email } });
     if (!user) throw new BadRequestException('No account found with this email');
     if (user.emailVerified) return { message: 'Email already verified.' };
 
-    const valid = await this.emailOtpService.verifyOtp(dto.email, dto.otp);
+    const valid = await this.emailOtpService.verifyOtp(email, dto.otp);
     if (!valid) throw new BadRequestException('Invalid or expired OTP code');
 
     await this.userRepo.update(user.id, {
@@ -65,11 +72,12 @@ export class AuthService {
   }
 
   async resendOtp(dto: ResendOtpDto) {
-    const user = await this.userRepo.findOne({ where: { email: dto.email } });
+    const email = dto.email.trim().toLowerCase();
+    const user = await this.userRepo.findOne({ where: { email } });
     if (!user) throw new BadRequestException('No account found with this email');
     if (user.emailVerified) return { message: 'Email already verified.' };
 
-    await this.emailOtpService.sendOtp(dto.email);
+    await this.emailOtpService.sendOtp(email);
     return { message: 'Verification code resent.' };
   }
 
