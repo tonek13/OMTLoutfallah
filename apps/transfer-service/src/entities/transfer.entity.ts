@@ -26,67 +26,71 @@ export enum Currency {
 
 @Entity('transfers')
 @Index(['senderId'])
+@Index(['tenantId'])
 @Index(['receiverPhone'])
 @Index(['status'])
 export class Transfer {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  tenantId!: string | null;
 
   @Column({ type: 'uuid' })
-  senderId: string;
+  senderId!: string;
 
   @Column({ type: 'varchar', length: 20 })
-  receiverPhone: string;
+  receiverPhone!: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
-  receiverName: string;
+  receiverName!: string | null;
 
   @Column({ type: 'decimal', precision: 18, scale: 4 })
-  amount: number;
+  amount!: number;
 
   @Column({ type: 'decimal', precision: 18, scale: 4, default: 0 })
-  feeAmount: number;
+  feeAmount!: number;
 
   @Column({ type: 'decimal', precision: 18, scale: 4 })
-  totalAmount: number;   // amount + feeAmount
+  totalAmount!: number;   // amount + feeAmount
 
   @Column({ type: 'enum', enum: Currency })
-  currency: Currency;
+  currency!: Currency;
 
   @Column({ type: 'enum', enum: TransferType })
-  type: TransferType;
+  type!: TransferType;
 
   @Column({
     type: 'enum',
     enum: TransferStatus,
     default: TransferStatus.PENDING,
   })
-  status: TransferStatus;
+  status!: TransferStatus;
 
   @Column({ type: 'varchar', length: 20, unique: true })
-  referenceCode: string;  // e.g. OMT-2024-XXXXXX
+  referenceCode!: string;  // e.g. OMT-2024-XXXXXX
 
   @Column({ type: 'text', nullable: true })
-  note: string;
+  note!: string | null;
 
   @Column({ type: 'varchar', length: 45, nullable: true })
-  senderIp: string;
+  senderIp!: string | null;
 
   @Column({ type: 'boolean', default: false })
-  isFlagged: boolean;        // fraud flag
+  isFlagged!: boolean;        // fraud flag
 
   @Column({ type: 'text', nullable: true })
-  flagReason: string;
+  flagReason!: string | null;
 
   @Column({ type: 'varchar', nullable: true })
-  cancelledBy: string;
+  cancelledBy!: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  completedAt: Date;
+  completedAt!: Date | null;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

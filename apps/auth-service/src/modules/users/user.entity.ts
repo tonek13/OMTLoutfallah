@@ -20,55 +20,59 @@ export enum UserStatus {
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
+
+  @Index()
+  @Column({ type: 'uuid', nullable: true })
+  tenantId!: string | null;
 
   @Index({ unique: true })
   @Column()
-  phone: string;
+  phone!: string;
 
   @Index({ unique: true })
   @Column({ nullable: true })
-  email: string;
+  email!: string | null;
 
   @Column()
-  passwordHash: string;
+  passwordHash!: string;
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.CUSTOMER })
-  role: UserRole;
+  role!: UserRole;
 
   @Column({ type: 'enum', enum: UserStatus, default: UserStatus.PENDING })
-  status: UserStatus;
+  status!: UserStatus;
 
   @Column({ default: false })
-  phoneVerified: boolean;
+  phoneVerified!: boolean;
 
   @Column({ default: false })
-  twoFactorEnabled: boolean;
+  twoFactorEnabled!: boolean;
 
   @Column({ nullable: true })
-  twoFactorSecret: string;
+  twoFactorSecret!: string | null;
 
   @Column({ nullable: true })
-  refreshTokenHash: string;
+  refreshTokenHash!: string | null;
 
   @Column({ default: 0 })
-  failedLoginAttempts: number;
+  failedLoginAttempts!: number;
 
   @Column({ nullable: true })
-  lockedUntil: Date;
+  lockedUntil!: Date | null;
 
   @Column({ nullable: true })
-  lastLoginAt: Date;
+  lastLoginAt!: Date | null;
 
   @Column({ nullable: true })
-  lastLoginIp: string;
+  lastLoginIp!: string | null;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @Column({ default: false })
-  emailVerified: boolean;
+  emailVerified!: boolean;
 }
