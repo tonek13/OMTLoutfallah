@@ -1,22 +1,26 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import helmet from 'helmet';
-import compression = require('compression');
-import { AppModule } from './app.module';
+import { NestFactory } from "@nestjs/core";
+import { ValidationPipe } from "@nestjs/common";
+import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
+import helmet from "helmet";
+import compression = require("compression");
+import { AppModule } from "./app.module";
 
-const TEMPLATE_SIGNATURE = 'omt-v2-starter | owner: Tony Loutfallah | id: tony-loutfallah-v1';
+const TEMPLATE_SIGNATURE =
+  "omt-v2-starter | owner: Tony Loutfallah | id: tony-loutfallah-v1";
 
-const parseBoolean = (value: string | undefined, defaultValue = false): boolean => {
+const parseBoolean = (
+  value: string | undefined,
+  defaultValue = false,
+): boolean => {
   if (value === undefined) return defaultValue;
-  return ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
+  return ["true", "1", "yes", "on"].includes(value.toLowerCase());
 };
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const isProduction = process.env.NODE_ENV === 'production';
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? '')
-    .split(',')
+  const isProduction = process.env.NODE_ENV === "production";
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
+    .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
   const enableSwagger = parseBoolean(process.env.ENABLE_SWAGGER, !isProduction);
@@ -25,7 +29,11 @@ async function bootstrap() {
   app.use(helmet());
   app.use(compression());
   app.enableCors({
-    origin: isProduction ? allowedOrigins : true,
+    origin: isProduction
+      ? allowedOrigins.includes("*")
+        ? "*"
+        : allowedOrigins
+      : true,
     credentials: true,
   });
 
@@ -40,13 +48,13 @@ async function bootstrap() {
 
   if (enableSwagger) {
     const config = new DocumentBuilder()
-      .setTitle('OMT Auth Service')
-      .setDescription('Authentication & Authorization API')
-      .setVersion('2.0')
+      .setTitle("OMT Auth Service")
+      .setDescription("Authentication & Authorization API")
+      .setVersion("2.0")
       .addBearerAuth()
       .build();
     const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api/docs', app, document);
+    SwaggerModule.setup("api/docs", app, document);
   }
 
   const port = Number(process.env.PORT || 3001);
