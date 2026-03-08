@@ -34,7 +34,7 @@ export class Transfer {
   id!: string;
 
   @Column({ type: 'uuid', nullable: true })
-  tenantId!: string | null;
+  tenantId!: string;
 
   @Column({ type: 'uuid' })
   senderId!: string;
@@ -43,7 +43,7 @@ export class Transfer {
   receiverPhone!: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
-  receiverName!: string | null;
+  receiverName!: string;
 
   @Column({ type: 'decimal', precision: 18, scale: 4 })
   amount!: number;
@@ -71,22 +71,22 @@ export class Transfer {
   referenceCode!: string;  // e.g. OMT-2024-XXXXXX
 
   @Column({ type: 'text', nullable: true })
-  note!: string | null;
+  note!: string;
 
   @Column({ type: 'varchar', length: 45, nullable: true })
-  senderIp!: string | null;
+  senderIp!: string;
 
   @Column({ type: 'boolean', default: false })
   isFlagged!: boolean;        // fraud flag
 
   @Column({ type: 'text', nullable: true })
-  flagReason!: string | null;
+  flagReason!: string;
 
   @Column({ type: 'varchar', nullable: true })
-  cancelledBy!: string | null;
+  cancelledBy!: string;
 
   @Column({ type: 'timestamp', nullable: true })
-  completedAt!: Date | null;
+  completedAt!: Date;
 
   @CreateDateColumn()
   createdAt!: Date;

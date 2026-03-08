@@ -24,7 +24,7 @@ export class User {
 
   @Index()
   @Column({ type: 'uuid', nullable: true })
-  tenantId!: string | null;
+  tenantId!: string;
 
   @Index({ unique: true })
   @Column()
@@ -32,7 +32,7 @@ export class User {
 
   @Index({ unique: true })
   @Column({ nullable: true })
-  email!: string | null;
+  email!: string;
 
   @Column()
   passwordHash!: string;
@@ -50,22 +50,22 @@ export class User {
   twoFactorEnabled!: boolean;
 
   @Column({ nullable: true })
-  twoFactorSecret!: string | null;
+  twoFactorSecret!: string;
 
   @Column({ nullable: true })
-  refreshTokenHash!: string | null;
+  refreshTokenHash!: string;
 
   @Column({ default: 0 })
   failedLoginAttempts!: number;
 
   @Column({ nullable: true })
-  lockedUntil!: Date | null;
+  lockedUntil!: Date;
 
   @Column({ nullable: true })
-  lastLoginAt!: Date | null;
+  lastLoginAt!: Date;
 
   @Column({ nullable: true })
-  lastLoginIp!: string | null;
+  lastLoginIp!: string;
 
   @CreateDateColumn()
   createdAt!: Date;
