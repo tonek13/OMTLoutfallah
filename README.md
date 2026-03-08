@@ -9,25 +9,24 @@ OMT v2 is a NestJS microservices backend focused on authentication and money tra
 - License: `MIT` (see [LICENSE](./LICENSE))
 - Attribution/notice: see [NOTICE](./NOTICE)
 
-Important:
-- Clones cannot be detected automatically by Git alone.
-- To preserve template attribution, keep `LICENSE`, `NOTICE`, and `TEMPLATE_FINGERPRINT.json`.
+## Live Demo
 
-## Live API
-
-- Base URL: `https://omt-auth-service.onrender.com`
-- Swagger Docs: `https://omt-auth-service.onrender.com/api/docs#/`
+| Interface | URL |
+|-----------|-----|
+| UI Control Deck | https://omtloutfallah.onrender.com |
+| Auth Service API | https://omt-auth-service.onrender.com |
+| Swagger Docs | https://omt-auth-service.onrender.com/api/docs |
 
 ## Current Repository Status
 
-| Service                | Port   | Status                | Notes                                                                    |
-| ---------------------- | ------ | --------------------- | ------------------------------------------------------------------------ |
-| `auth-service`         | `3001` | Implemented           | Running API with Swagger, JWT auth, email OTP, PostgreSQL, rate limiting |
-| `transfer-service`     | `3002` | Implemented | API/controllers/entities and JWT validation are in place |
-| `user-service`         | `3003` | Scaffold only         | No runnable service entrypoint yet                                       |
-| `notification-service` | `3004` | Scaffold only         | No runnable service entrypoint yet                                       |
-| `audit-service`        | `3005` | Scaffold only         | No runnable service entrypoint yet                                       |
-| `libs/common`          | N/A    | Implemented           | Shared global exception filter and audit interceptor                     |
+| Service                | Port   | Status        | Notes                                                                    |
+| ---------------------- | ------ | ------------- | ------------------------------------------------------------------------ |
+| `auth-service`         | `3001` | Implemented   | Running API with Swagger, JWT auth, email OTP, PostgreSQL, rate limiting |
+| `transfer-service`     | `3002` | Implemented   | API/controllers/entities and JWT validation are in place                 |
+| `user-service`         | `3003` | Scaffold only | No runnable service entrypoint yet                                       |
+| `notification-service` | `3004` | Scaffold only | No runnable service entrypoint yet                                       |
+| `audit-service`        | `3005` | Scaffold only | No runnable service entrypoint yet                                       |
+| `libs/common`          | N/A    | Implemented   | Shared global exception filter and audit interceptor                     |
 
 ## Implemented Features
 
@@ -35,7 +34,7 @@ Important:
 
 - User registration with phone and required email.
 - Password hashing with `bcrypt` (12 rounds).
-- Email OTP verification flow with Redis-backed code storage (10 min expiry).
+- Email OTP verification via **Brevo** with Redis-backed code storage (10 min expiry).
 - Login with account lockout after 5 failed attempts (30 minutes).
 - JWT access token (`15m`) and refresh token (`7d`).
 - Refresh token hashing before persistence.
@@ -80,8 +79,6 @@ Swagger: `http://localhost:3001/api/docs`
 
 ### Transfer Service (`http://localhost:3002`)
 
-Base prefix is `api/v1`, so endpoints are:
-
 | Method  | Endpoint                       | Description               |
 | ------- | ------------------------------ | ------------------------- |
 | `POST`  | `/api/v1/transfers`            | Create transfer           |
@@ -98,15 +95,11 @@ Swagger: `http://localhost:3002/api/docs`
 - Docker Desktop (for PostgreSQL, Redis, Kafka, Zookeeper)
 
 ## Environment Setup
-
-Create env files:
-
 ```bash
 # macOS / Linux
 cp apps/auth-service/.env.example apps/auth-service/.env
 cp apps/transfer-service/.env.example apps/transfer-service/.env
 ```
-
 ```powershell
 # Windows PowerShell
 Copy-Item apps/auth-service/.env.example apps/auth-service/.env
@@ -115,69 +108,44 @@ Copy-Item apps/transfer-service/.env.example apps/transfer-service/.env
 
 Important notes:
 
-- `auth-service` email OTP provider (production):
-  - Recommended on Render free tier: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`
-  - SMTP fallback: `GMAIL_USER`, `GMAIL_APP_PASSWORD`
-- `transfer-service` uses `DB_PASSWORD` (or legacy `DB_PASS`); if you use the provided Docker PostgreSQL, set:
-  - `DB_HOST=localhost`
-  - `DB_PORT=5432`
-  - `DB_USER=omt_user`
-  - `DB_PASSWORD=omt_password`
-  - `DB_NAME=omt_db`
-- `JWT_SECRET` in `transfer-service` must match `auth-service` so bearer tokens can be validated consistently.
+- Email OTP uses **Brevo** — set `BREVO_API_KEY`, `BREVO_FROM_EMAIL`, `BREVO_FROM_NAME` in your `.env`.
+- `JWT_SECRET` in `transfer-service` must match `auth-service`.
 
 ## How To Launch
 
 ### 1. Install dependencies
-
 ```bash
 npm install
 ```
 
 ### 2. Start infrastructure
-
 ```bash
 docker compose up -d postgres redis zookeeper kafka
 ```
 
 ### 3. Start services
-
-Open separate terminals:
-
 ```bash
 # Terminal 1
 npm run start:auth
-```
 
-```bash
 # Terminal 2
 npm run start:transfer
-```
 
-```bash
 # Terminal 3 (UI playground)
 npm run start:ui
 ```
 
 UI URL: `http://localhost:4173`
 
-Use the UI to run auth and transfer endpoints quickly:
-- Set API targets at the top of the page (defaults are prefilled).
-- Login stores access/refresh tokens in browser storage.
-- Transfer requests automatically use the current bearer token.
-
 ## Production Security Settings
 
 - Set `NODE_ENV=production` in each service.
-- Set `TYPEORM_SYNCHRONIZE=false` (default in the templates).
-- Set `ENABLE_SWAGGER=false` (default behavior in production unless explicitly enabled).
-- Set strict `ALLOWED_ORIGINS` (comma-separated), never `*` in production.
-- Use strong secrets (`JWT_SECRET`, `JWT_REFRESH_SECRET`) with at least 32 characters.
+- Set `TYPEORM_SYNCHRONIZE=false`.
+- Set `ENABLE_SWAGGER=false`.
+- Set strict `ALLOWED_ORIGINS`, never `*` in production.
+- Use strong secrets for `JWT_SECRET` and `JWT_REFRESH_SECRET` (32+ chars).
 
-## Known Gaps Right Now
+## Known Gaps
 
 - `user-service`, `notification-service`, and `audit-service` are scaffolded but not runnable yet.
-- `docker-compose.yml` defines app containers for all services, but only `apps/auth-service/Dockerfile` exists at the moment.
-- In the current free Render dev environment, email verification is not reliable for external recipients:
-  - outbound SMTP ports are restricted on free instances,
-  - and Resend test mode can only send to the account owner's email until a custom domain is verified.
+- Only `apps/auth-service/Dockerfile` exists at the moment.
