@@ -5,6 +5,7 @@ import { ThrottlerModule } from "@nestjs/throttler";
 import * as Joi from "joi";
 import { AuthModule } from "./modules/auth/auth.module";
 import { UsersModule } from "./modules/users/users.module";
+import { TenantsModule } from "./modules/tenants/tenants.module";
 
 const parseBoolean = (
   value: string | undefined,
@@ -98,6 +99,7 @@ const parseBoolean = (
 
     AuthModule,
     UsersModule,
+    TenantsModule,
   ],
 })
 export class AppModule {}
