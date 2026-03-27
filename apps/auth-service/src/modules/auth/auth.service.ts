@@ -7,10 +7,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { User, UserStatus } from '../users/user.entity';
+import { Tenant } from '../tenants/tenant.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyEmailDto, ResendOtpDto } from './dto/verify-email.dto';
 import { EmailOtpService } from './email-otp.service';
+import type { JwtPayload } from '../../../../../libs/common/src/types/jwt-payload.type';
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_DURATION_MINUTES = 30;
@@ -20,6 +22,8 @@ export class AuthService {
   constructor(
       @InjectRepository(User)
       private readonly userRepo: Repository<User>,
+      @InjectRepository(Tenant)
+      private readonly tenantRepo: Repository<Tenant>,
       private readonly jwtService: JwtService,
       private readonly emailOtpService: EmailOtpService,
   ) {}
@@ -28,6 +32,9 @@ export class AuthService {
     const normalizedEmail = dto.email?.trim().toLowerCase();
     if (!normalizedEmail) throw new BadRequestException('Email is required');
 
+    const tenant = await this.tenantRepo.findOne({ where: { id: dto.tenantId } });
+    if (!tenant) throw new BadRequestException('Invalid tenantId');
+
     const exists = await this.userRepo.findOne({ where: { phone: dto.phone } });
     if (exists) throw new ConflictException('Phone already registered');
 
@@ -35,7 +42,12 @@ export class AuthService {
     if (emailExists) throw new ConflictException('Email already registered');
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
-    const user = this.userRepo.create({ ...dto, email: normalizedEmail, passwordHash });
+    const user = this.userRepo.create({
+      ...dto,
+      tenantId: dto.tenantId,
+      email: normalizedEmail,
+      passwordHash,
+    });
     await this.userRepo.save(user);
 
     try {
@@ -126,7 +138,16 @@ export class AuthService {
   }
 
   private async generateTokens(user: User) {
-    const payload = { sub: user.id, phone: user.phone, role: user.role };
+    if (!user.tenantId) {
+      throw new ForbiddenException('User is not assigned to a tenant');
+    }
+
+    const payload: JwtPayload = {
+      sub: user.id,
+      phone: user.phone,
+      role: user.role,
+      tenantId: user.tenantId,
+    };
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, { expiresIn: '15m' }),

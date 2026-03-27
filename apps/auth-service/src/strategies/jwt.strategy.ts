@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../modules/users/user.entity';
+import type { JwtPayload } from '../../../../libs/common/src/types/jwt-payload.type';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -20,9 +21,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: any) {
+  async validate(payload: Partial<JwtPayload>) {
+    if (!payload?.sub || !payload.tenantId) {
+      throw new UnauthorizedException();
+    }
+
     const user = await this.usersRepo.findOne({ where: { id: payload.sub } });
     if (!user || user.status === 'blocked' || user.status === 'suspended') throw new UnauthorizedException();
-    return { id: user.id, phone: user.phone, role: user.role };
+    return { id: user.id, phone: user.phone, role: user.role, tenantId: payload.tenantId };
   }
 }

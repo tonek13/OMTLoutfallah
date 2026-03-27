@@ -5,6 +5,8 @@ import { ThrottlerModule } from "@nestjs/throttler";
 import * as Joi from "joi";
 import { AuthModule } from "./modules/auth/auth.module";
 import { UsersModule } from "./modules/users/users.module";
+import { TenantsModule } from "./modules/tenants/tenants.module";
+import { CurrencyModule } from "../../currency/currency.module";
 
 const parseBoolean = (
   value: string | undefined,
@@ -86,7 +88,7 @@ const parseBoolean = (
           config.get<string>("DB_PASSWORD") ??
           config.getOrThrow<string>("DB_PASS"),
         database: config.getOrThrow<string>("DB_NAME"),
-        entities: [__dirname + "/**/*.entity{.ts,.js}"],
+        autoLoadEntities: true,
         synchronize: parseBoolean(
           config.get<string>("TYPEORM_SYNCHRONIZE"),
           false,
@@ -98,6 +100,8 @@ const parseBoolean = (
 
     AuthModule,
     UsersModule,
+    TenantsModule,
+    CurrencyModule,
   ],
 })
 export class AppModule {}

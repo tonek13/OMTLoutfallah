@@ -30,18 +30,21 @@ export class TransferService {
   ) {}
 
   // ─── Create Transfer ───────────────────────────────────────────────
-  async createTransfer(senderId: string, dto: CreateTransferDto, senderIp: string) {
+  async createTransfer(senderId: string, tenantId: string, dto: CreateTransferDto, senderIp: string) {
     // 1. Check daily limit
     await this.checkDailyLimit(senderId, dto.amount, dto.currency);
 
-    // 2. Calculate fee
+    // 2. Prevent cross-tenant receiver targeting when receiver has a tenant wallet
+    await this.assertReceiverTenantIsolation(dto.receiverPhone, tenantId);
+
+    // 3. Calculate fee
     const feeAmount = this.calculateFee(dto.amount, dto.currency);
     const totalAmount = parseFloat((dto.amount + feeAmount).toFixed(4));
 
-    // 3. Fraud pre-check
+    // 4. Fraud pre-check
     const isFlagged = await this.fraudPreCheck(senderId, dto, senderIp);
 
-    // 4. Use DB transaction to guarantee atomicity
+    // 5. Use DB transaction to guarantee atomicity
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -49,6 +52,7 @@ export class TransferService {
     try {
       const transfer = queryRunner.manager.create(Transfer, {
         id: uuidv4(),
+        tenantId,
         senderId,
         receiverPhone: dto.receiverPhone,
         receiverName: dto.receiverName,
@@ -70,7 +74,7 @@ export class TransferService {
 
       this.logger.log(`Transfer created: ${transfer.referenceCode} | sender: ${senderId}`);
 
-      // 5. Emit event for audit & notification (async - fire and forget)
+      // 6. Emit event for audit & notification (async - fire and forget)
       this.emitTransferEvent(transfer);
 
       return this.toResponse(transfer);
@@ -80,6 +84,50 @@ export class TransferService {
       throw err;
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  private async assertReceiverTenantIsolation(receiverPhone: string, senderTenantId: string): Promise<void> {
+    const receiverWalletTenantId = await this.findReceiverWalletTenantId(receiverPhone);
+
+    if (receiverWalletTenantId && receiverWalletTenantId !== senderTenantId) {
+      throw new BadRequestException('Cross-tenant transfers are not allowed');
+    }
+  }
+
+  private async findReceiverWalletTenantId(receiverPhone: string): Promise<string | undefined> {
+    try {
+      const wallets = await this.dataSource.query(
+        `
+          SELECT w."tenantId" AS "tenantId"
+          FROM wallets w
+          INNER JOIN users u ON u.id = w."userId"
+          WHERE u.phone = $1
+          LIMIT 1
+        `,
+        [receiverPhone],
+      );
+
+      return wallets?.[0]?.tenantId;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      const isMissingWalletsTable = message.includes('relation "wallets" does not exist');
+      if (!isMissingWalletsTable) {
+        throw error;
+      }
+
+      const memberships = await this.dataSource.query(
+        `
+          SELECT m."tenantId" AS "tenantId"
+          FROM organization_memberships m
+          INNER JOIN users u ON u.id = m."userId"
+          WHERE u.phone = $1
+          LIMIT 1
+        `,
+        [receiverPhone],
+      );
+
+      return memberships?.[0]?.tenantId;
     }
   }
 

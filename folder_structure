@@ -1,0 +1,41 @@
+Project folder structure (directories only)
+Excluded: .git, node_modules, dist, .idea
+
+omt-v2/
+|-- apps/
+|   |-- audit-service/
+|   |-- auth-service/
+|   |   `-- src/
+|   |       |-- {modules/
+|   |       |-- decorators/
+|   |       |-- dto/
+|   |       |-- guards/
+|   |       |-- modules/
+|   |       |   |-- auth/
+|   |       |   |   |-- dto/
+|   |       |   |   |-- guards/
+|   |       |   |   `-- strategies/
+|   |       |   |-- currency/
+|   |       |   |   |-- dto/
+|   |       |   |   `-- entities/
+|   |       |   `-- users/
+|   |       `-- strategies/
+|   |-- notification-service/
+|   |-- transfer-service/
+|   |   `-- src/
+|   |       |-- {modules/
+|   |       |   `-- {transfer,wallet},config}/
+|   |       |-- dto/
+|   |       |-- entities/
+|   |       |-- guards/
+|   |       |-- strategies/
+|   |       `-- transfer/
+|   |-- ui/
+|   `-- user-service/
+|-- docker/
+`-- libs/
+    `-- common/
+        `-- src/
+            |-- {decorators,filters,guards,interceptors,interfaces,utils}/
+            |-- filters/
+            `-- interceptors/

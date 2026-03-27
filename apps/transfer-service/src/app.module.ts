@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -8,6 +9,8 @@ import { Transfer } from './entities/transfer.entity';
 import { TransferService } from './transfer/transfer.service';
 import { TransferController } from './transfer/transfer.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { TenantContextInterceptor } from './tenant/tenant-context.interceptor';
+import { TypeOrmTenantScopeInitializer } from './tenant/typeorm-tenant-scope.initializer';
 
 const parseBoolean = (value: string | undefined, defaultValue = false): boolean => {
   if (value === undefined) return defaultValue;
@@ -67,6 +70,14 @@ const parseBoolean = (value: string | undefined, defaultValue = false): boolean 
     TypeOrmModule.forFeature([Transfer]),
   ],
   controllers: [TransferController],
-  providers: [TransferService, JwtStrategy],
+  providers: [
+    TransferService,
+    JwtStrategy,
+    TypeOrmTenantScopeInitializer,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TenantContextInterceptor,
+    },
+  ],
 })
 export class TransferModule {}

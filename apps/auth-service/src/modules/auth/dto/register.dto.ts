@@ -1,7 +1,11 @@
-import { IsString, IsEmail, MinLength, Matches } from 'class-validator';
+import { IsString, IsEmail, MinLength, Matches, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RegisterDto {
+  @ApiProperty({ example: '8e80e385-0cfa-4f90-b4ca-74f52ad648e2' })
+  @IsUUID()
+  tenantId: string;
+
   @ApiProperty({ example: '+9613123456' })
   @IsString()
   @Matches(/^\+[1-9]\d{7,14}$/, { message: 'Phone must be a valid international number' })
