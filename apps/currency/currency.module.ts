@@ -1,17 +1,18 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Tenant } from '../tenants/entities/tenant.entity';
-import { OrganizationCurrency } from './entities/organization-currency.entity';
-import { OrganizationMembership } from './entities/organization-membership.entity';
+import { Tenant } from '../auth-service/src/modules/tenants/tenant.entity';
+import { Currency } from './entities/currency.entity';
+import { Wallet } from './entities/wallet.entity';
 import { CurrencyService } from './currency.service';
 import { CurrencyController } from './currency.controller';
+import { TenantAdminGuard } from 'apps/auth-service/src/guards/tenant-admin.guard';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Tenant, OrganizationCurrency, OrganizationMembership]),
+    TypeOrmModule.forFeature([Tenant, Currency, Wallet]),
   ],
   controllers: [CurrencyController],
-  providers: [CurrencyService],
+  providers: [CurrencyService, TenantAdminGuard],
   exports: [CurrencyService],
 })
 export class CurrencyModule {}

@@ -3,7 +3,7 @@ import {
   IsPhoneNumber, Min, Max, MaxLength
 } from 'class-validator';
 import { Currency, TransferType } from '../entities/transfer.entity';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateTransferDto {
   @ApiProperty({ example: '+96170123456' })
@@ -37,14 +37,69 @@ export class CreateTransferDto {
 }
 
 export class TransferResponseDto {
-  id: string;
-  referenceCode: string;
-  status: string;
-  amount: number;
-  feeAmount: number;
-  totalAmount: number;
-  currency: string;
-  receiverPhone: string;
-  receiverName: string;
-  createdAt: Date;
+  @ApiProperty({ example: 'fb6ba9bd-d2f7-42a3-a623-9302c9c317ff' })
+  id!: string;
+
+  @ApiProperty({ example: 'OMT-2026-X9A31F' })
+  referenceCode!: string;
+
+  @ApiProperty({ example: 'PROCESSING' })
+  status!: string;
+
+  @ApiProperty({ example: 100 })
+  amount!: number;
+
+  @ApiProperty({ example: 3 })
+  feeAmount!: number;
+
+  @ApiProperty({ example: 103 })
+  totalAmount!: number;
+
+  @ApiProperty({ enum: Currency, example: Currency.USD })
+  currency!: Currency;
+
+  @ApiProperty({ enum: TransferType, example: TransferType.DOMESTIC })
+  type!: TransferType;
+
+  @ApiProperty({ example: '+96170123456' })
+  receiverPhone!: string;
+
+  @ApiProperty({ example: 'John Doe' })
+  receiverName!: string;
+
+  @ApiPropertyOptional({ example: 'Monthly allowance' })
+  note?: string;
+
+  @ApiProperty({ example: false })
+  isFlagged!: boolean;
+
+  @ApiProperty({ example: '2026-03-27T12:00:00.000Z' })
+  createdAt!: Date;
+}
+
+export class TransfersPaginationMetaDto {
+  @ApiProperty({ example: 42 })
+  total!: number;
+
+  @ApiProperty({ example: 1 })
+  page!: number;
+
+  @ApiProperty({ example: 20 })
+  limit!: number;
+
+  @ApiProperty({ example: 3 })
+  pages!: number;
+}
+
+export class TransferListResponseDto {
+  @ApiProperty({ type: TransferResponseDto, isArray: true })
+  data!: TransferResponseDto[];
+
+  @ApiProperty({ type: TransfersPaginationMetaDto })
+  meta!: TransfersPaginationMetaDto;
+}
+
+export class TransferCancelResponseDto {
+  @ApiProperty({ example: 'Transfer cancelled successfully' })
+  message!: string;
 }

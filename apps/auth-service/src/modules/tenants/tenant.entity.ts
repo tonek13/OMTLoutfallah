@@ -3,9 +3,12 @@ import {
   CreateDateColumn,
   Entity,
   Index,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Currency } from '../../../../currency/entities/currency.entity';
+import { Wallet } from '../../../../currency/entities/wallet.entity';
 
 export enum TenantStatus {
   ACTIVE = 'active',
@@ -51,4 +54,10 @@ export class Tenant {
 
   @UpdateDateColumn()
   updatedAt!: Date;
+
+  @OneToMany(() => Wallet, (wallet) => wallet.tenant)
+  wallets!: Wallet[];
+
+  @OneToMany(() => Currency, (currency) => currency.tenant)
+  currencies!: Currency[];
 }

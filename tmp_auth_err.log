@@ -1,0 +1,5 @@
+(node:26756) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:31904) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[31m[Nest] 31904  - [39m03/28/2026, 12:36:09 AM [31m  ERROR[39m [38;5;3m[EmailOtpService] [39m[31mFailed to send OTP to tenant1774650968@example.com: fetch failed[39m

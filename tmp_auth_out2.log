@@ -1,0 +1,49 @@
+
+> omt-v2@1.0.0 start:auth
+> node -e "require('fs').rmSync('dist/apps/auth-service',{recursive:true,force:true})" && nest start auth-service --watch
+
+[2J[3J[H[[90m12:37:11 AM[0m] Starting compilation in watch mode...
+
+[[90m12:37:14 AM[0m] Found 0 errors. Watching for file changes.
+
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +21ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUsersModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mThrottlerModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +25ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmCoreModule dependencies initialized[39m[38;5;3m +105ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTenantsModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mCurrencyModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/auth}:[39m[38;5;3m +18ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/register, POST} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/verify-email, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/resend-otp, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/login, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/refresh, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/logout, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mTenantsController {/tenants}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/tenants, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mCurrencyController {/}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/tenant-organizations, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/tenants/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/tenants/:id, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/tenants/:tenantId/currencies, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/tenants/:tenantId/currencies, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/tenants/:tenantId/currencies/:currencyId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/tenants/:tenantId/currencies/:currencyId/members, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/wallets/me, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/tenants/:tenantId/mint, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[EmailOtpService] [39m[32mEmail OTP provider: Brevo API[39m
+[32m[Nest] 12336  - [39m03/28/2026, 12:37:15 AM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +1ms[39m
+Auth Service running on port 3016
+Template signature: omt-v2-starter | owner: Tony Loutfallah | id: tony-loutfallah-v1
+[33m[Nest] 12336  - [39m03/28/2026, 12:37:22 AM [33m   WARN[39m [38;5;3m[EmailOtpService] [39m[33mUsing fallback OTP in non-production for tenant1774651042@example.com: 446977[39m
