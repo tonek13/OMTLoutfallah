@@ -8,6 +8,7 @@ import { User, UserRole, UserStatus } from '../users/user.entity';
 import { EmailOtpService } from '../auth/email-otp.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { Tenant, TenantPlan, TenantStatus } from './tenant.entity';
+import type { JwtPayload } from '../../../../../libs/common/src/types/jwt-payload.type';
 
 @Injectable()
 export class TenantsService {
@@ -62,7 +63,7 @@ export class TenantsService {
         phone: adminPhone,
         email: adminEmail,
         passwordHash,
-        role: UserRole.ADMIN,
+        role: UserRole.TENANT_ADMIN,
         status: UserStatus.PENDING,
         emailVerified: false,
       });
@@ -112,7 +113,7 @@ export class TenantsService {
   }
 
   private async generateTokens(user: User) {
-    const payload = {
+    const payload: JwtPayload = {
       sub: user.id,
       phone: user.phone,
       role: user.role,

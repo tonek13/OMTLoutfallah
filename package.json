@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start:auth": "nest start auth-service --watch",
+    "start:auth": "node -e \"require('fs').rmSync('dist/apps/auth-service',{recursive:true,force:true})\" && nest start auth-service --watch",
     "start:user": "nest start user-service --watch",
-    "start:transfer": "nest start transfer-service --watch",
+    "start:transfer": "node -e \"require('fs').rmSync('dist/apps/transfer-service',{recursive:true,force:true})\" && nest start transfer-service --watch",
     "start:notification": "nest start notification-service --watch",
     "start:audit": "nest start audit-service --watch",
     "start:ui": "node apps/ui/server.js",

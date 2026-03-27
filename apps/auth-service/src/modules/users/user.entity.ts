@@ -6,6 +6,7 @@ import {
 export enum UserRole {
   CUSTOMER   = 'customer',
   AGENT      = 'agent',
+  TENANT_ADMIN = 'tenant_admin',
   ADMIN      = 'admin',
   SUPERADMIN = 'superadmin',
 }

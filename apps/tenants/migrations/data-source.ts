@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { User } from '../../auth-service/src/modules/users/user.entity';
-import { OrganizationCurrency } from '../../currency/entities/organization-currency.entity';
-import { OrganizationMembership } from '../../currency/entities/organization-membership.entity';
+import { Currency } from '../../currency/entities/currency.entity';
+import { Wallet } from '../../currency/entities/wallet.entity';
 import { Tenant } from '../entities/tenant.entity';
 import { Transfer } from '../../transfer-service/src/entities/transfer.entity';
 
@@ -26,7 +26,7 @@ const AppDataSource = new DataSource({
   username: getRequiredEnv('DB_USER'),
   password: process.env.DB_PASSWORD ?? getRequiredEnv('DB_PASS'),
   database: getRequiredEnv('DB_NAME'),
-  entities: [User, Transfer, Tenant, OrganizationCurrency, OrganizationMembership],
+  entities: [User, Transfer, Tenant, Currency, Wallet],
   migrations: [__dirname + '/[0-9]*-*.ts', __dirname + '/[0-9]*-*.js'],
   migrationsTableName: 'typeorm_migrations',
   synchronize: false,

@@ -49,9 +49,19 @@ async function bootstrap() {
   if (enableSwagger) {
     const config = new DocumentBuilder()
       .setTitle("OMT Auth Service")
-      .setDescription("Authentication & Authorization API")
+      .setDescription("Authentication, tenant, currency, and wallet API")
       .setVersion("2.0")
       .addBearerAuth()
+      .addApiKey(
+        {
+          type: "apiKey",
+          in: "header",
+          name: "x-tenant-id",
+          description:
+            "Tenant context header required by tenant-scoped wallet endpoints.",
+        },
+        "tenant-id",
+      )
       .build();
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup("api/docs", app, document);

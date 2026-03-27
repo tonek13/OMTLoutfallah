@@ -9,12 +9,14 @@ export class EmailOtpService implements OnModuleInit {
   private brevoApiKey: string;
   private fromEmail: string;
   private fromName: string;
+  private readonly isProduction: boolean;
 
   constructor(private config: ConfigService) {
     this.redis = new Redis({
       host: this.config.get('REDIS_HOST') || 'localhost',
       port: this.config.get<number>('REDIS_PORT') || 6379,
     });
+    this.isProduction = this.config.get<string>('NODE_ENV') === 'production';
     this.brevoApiKey = this.config.get<string>('BREVO_API_KEY') || '';
     this.fromEmail = this.config.get<string>('BREVO_FROM_EMAIL') || '';
     this.fromName = this.config.get<string>('BREVO_FROM_NAME') || 'OMT Lebanon';
@@ -53,13 +55,21 @@ export class EmailOtpService implements OnModuleInit {
     heading: string;
     intro: string;
   }): Promise<void> {
-    if (!this.brevoApiKey) {
-      throw new InternalServerErrorException('Email service is not configured.');
-    }
-
     const otp = this.generateOtp();
     const key = `otp:email:${params.email}`;
     await this.redis.setex(key, 600, otp);
+
+    if (!this.brevoApiKey) {
+      if (this.isProduction) {
+        await this.redis.del(key);
+        throw new InternalServerErrorException('Email service is not configured.');
+      }
+
+      this.logger.warn(
+        `Email transport disabled in non-production. OTP for ${params.email}: ${otp}`,
+      );
+      return;
+    }
 
     try {
       const response = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -87,10 +97,17 @@ export class EmailOtpService implements OnModuleInit {
 
       this.logger.log(`OTP sent to ${params.email}`);
     } catch (err) {
-      await this.redis.del(key);
       const reason = err instanceof Error ? err.message : String(err);
       this.logger.error(`Failed to send OTP to ${params.email}: ${reason}`);
-      throw new InternalServerErrorException('Failed to send verification email.');
+
+      if (this.isProduction) {
+        await this.redis.del(key);
+        throw new InternalServerErrorException('Failed to send verification email.');
+      }
+
+      this.logger.warn(
+        `Using fallback OTP in non-production for ${params.email}: ${otp}`,
+      );
     }
   }
 

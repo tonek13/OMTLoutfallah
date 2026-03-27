@@ -3,8 +3,8 @@ import {
   CreateDateColumn, UpdateDateColumn,
   OneToMany, Index,
 } from 'typeorm';
-import { OrganizationCurrency } from '../../currency/entities/organization-currency.entity';
-import { OrganizationMembership } from '../../currency/entities/organization-membership.entity';
+import { Currency } from '../../currency/entities/currency.entity';
+import { Wallet } from '../../currency/entities/wallet.entity';
 
 export enum TenantStatus {
   ACTIVE = 'active',
@@ -51,9 +51,9 @@ export class Tenant {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  @OneToMany(() => OrganizationMembership, (m) => m.tenant)
-  memberships!: OrganizationMembership[];
+  @OneToMany(() => Wallet, (wallet) => wallet.tenant)
+  wallets!: Wallet[];
 
-  @OneToMany(() => OrganizationCurrency, (c) => c.tenant)
-  currencies!: OrganizationCurrency[];
+  @OneToMany(() => Currency, (currency) => currency.tenant)
+  currencies!: Currency[];
 }
