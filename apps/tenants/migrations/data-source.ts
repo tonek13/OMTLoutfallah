@@ -1,9 +1,9 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { User } from '../../auth-service/src/modules/users/user.entity';
+import { Tenant } from '../../auth-service/src/modules/tenants/tenant.entity';
 import { Currency } from '../../currency/entities/currency.entity';
 import { Wallet } from '../../currency/entities/wallet.entity';
-import { Tenant } from '../entities/tenant.entity';
 import { Transfer } from '../../transfer-service/src/entities/transfer.entity';
 
 const parseBoolean = (value: string | undefined, defaultValue = false): boolean => {
