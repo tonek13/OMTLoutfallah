@@ -6,16 +6,38 @@ const storageKeys = {
   refreshToken: 'omt.ui.refreshToken',
 };
 
-const defaults = {
+const localDefaults = {
   authBase: 'http://localhost:3001',
   organizationBase: 'http://localhost:3001',
   transferBase: 'http://localhost:3002/api/v1',
 };
 
+const productionDefaults = {
+  authBase: 'https://omt-auth-service.onrender.com',
+  organizationBase: 'https://omt-auth-service.onrender.com',
+  transferBase: 'https://omt-transfer-service.onrender.com/api/v1',
+};
+
+const isHostedUi = window.location.hostname.endsWith('onrender.com');
+const defaults = isHostedUi ? productionDefaults : localDefaults;
+
+const readBaseSetting = (key, fallback) => {
+  const stored = localStorage.getItem(key);
+  if (!stored) return fallback;
+
+  // On hosted UI, replace stale localhost targets with live defaults.
+  if (isHostedUi && /^http:\/\/localhost(:\d+)?/i.test(stored)) {
+    localStorage.setItem(key, fallback);
+    return fallback;
+  }
+
+  return stored;
+};
+
 const state = {
-  authBase: localStorage.getItem(storageKeys.authBase) || defaults.authBase,
-  organizationBase: localStorage.getItem(storageKeys.organizationBase) || defaults.organizationBase,
-  transferBase: localStorage.getItem(storageKeys.transferBase) || defaults.transferBase,
+  authBase: readBaseSetting(storageKeys.authBase, defaults.authBase),
+  organizationBase: readBaseSetting(storageKeys.organizationBase, defaults.organizationBase),
+  transferBase: readBaseSetting(storageKeys.transferBase, defaults.transferBase),
   accessToken: localStorage.getItem(storageKeys.accessToken) || '',
   refreshToken: localStorage.getItem(storageKeys.refreshToken) || '',
   claims: null,

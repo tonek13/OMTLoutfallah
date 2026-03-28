@@ -2,6 +2,28 @@
 
 OMT v2 is a multi-tenant backend with auth, tenant administration, private currencies, wallets, and transfers.
 
+## URLs
+
+### Production
+
+| Surface | URL |
+| --- | --- |
+| UI Console | `https://omtloutfallah.onrender.com` |
+| Auth API Base | `https://omt-auth-service.onrender.com` |
+| Auth Swagger | `https://omt-auth-service.onrender.com/api/docs` |
+| Transfer API Base | `https://omt-transfer-service.onrender.com/api/v1` |
+| Transfer Swagger | `https://omt-transfer-service.onrender.com/api/docs` |
+
+### Local
+
+| Surface | URL |
+| --- | --- |
+| UI Console | `http://localhost:4173` |
+| Auth API Base | `http://localhost:3001` |
+| Auth Swagger | `http://localhost:3001/api/docs` |
+| Transfer API Base | `http://localhost:3002/api/v1` |
+| Transfer Swagger | `http://localhost:3002/api/docs` |
+
 ## Ownership
 
 - Template author: **Tony Loutfallah**
@@ -170,19 +192,3 @@ Swagger is controlled by `ENABLE_SWAGGER`.
 - Transfer docs: `/api/docs`
 
 In production, set `ENABLE_SWAGGER=true` only if you intentionally want public docs.
-
-## Troubleshooting
-
-### Render: `Cannot find module ... dist/apps/auth-service/main.js`
-
-Your start path is wrong for this monorepo output. Use:
-
-- `node dist/apps/auth-service/apps/auth-service/src/main.js`
-
-### Watch mode stale dist artifacts
-
-`start:auth` and `start:transfer` scripts pre-clean their service dist folders before watch start.
-
-### Temporary log files
-
-Files like `tmp_auth_err*.log` and `tmp_auth_out*.log` are local debug logs and safe to delete.
