@@ -194,6 +194,23 @@ export class CurrencyResponseDto {
   updatedAt!: Date;
 }
 
+export class CurrencyStatsResponseDto {
+  @ApiProperty({ example: 'Campus Coin' })
+  name!: string;
+
+  @ApiProperty({ example: 'ACC' })
+  symbol!: string;
+
+  @ApiProperty({ example: 875000 })
+  circulatingSupply!: number;
+
+  @ApiProperty({ example: 214 })
+  totalWallets!: number;
+
+  @ApiProperty({ example: 5096 })
+  totalTransfers!: number;
+}
+
 export class WalletCurrencySummaryDto {
   @ApiProperty({ example: '6e1084f0-42bd-430b-b53b-8f7f9665179d' })
   id!: string;

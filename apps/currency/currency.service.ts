@@ -1,5 +1,5 @@
 import {
-  Injectable, NotFoundException, ConflictException,
+  Injectable, NotFoundException, ConflictException, ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -111,6 +111,37 @@ export class CurrencyService {
     return currency;
   }
 
+  async getCurrencyStats(
+    currencyId: string,
+    requesterTenantId: string,
+  ): Promise<{
+    name: string;
+    symbol: string;
+    circulatingSupply: number;
+    totalWallets: number;
+    totalTransfers: number;
+  }> {
+    const currency = await this.currencyRepo.findOne({ where: { id: currencyId } });
+    if (!currency) throw new NotFoundException('Currency not found');
+
+    if (currency.tenantId !== requesterTenantId) {
+      throw new ForbiddenException('You are not a member of this tenant');
+    }
+
+    const [totalWallets, totalTransfers] = await Promise.all([
+      this.walletRepo.count({ where: { tenantId: currency.tenantId, currencyId: currency.id } }),
+      this.countTransfersForCurrency(currency.tenantId, currency.symbol),
+    ]);
+
+    return {
+      name: currency.name,
+      symbol: currency.symbol,
+      circulatingSupply: Number(currency.circulatingSupply),
+      totalWallets,
+      totalTransfers,
+    };
+  }
+
   async listCurrencies(tenantId: string): Promise<Currency[]> {
     return this.currencyRepo.find({ where: { tenantId } });
   }
@@ -165,5 +196,28 @@ export class CurrencyService {
       await manager.save(Currency, currency);
       return manager.save(Wallet, wallet);
     });
+  }
+
+  private async countTransfersForCurrency(tenantId: string, symbol: string): Promise<number> {
+    try {
+      const rows = await this.dataSource.query(
+        `
+          SELECT COUNT(*)::int AS "totalTransfers"
+          FROM transfers t
+          WHERE t."tenantId" = $1
+            AND t.currency::text = $2
+        `,
+        [tenantId, symbol],
+      );
+
+      return Number(rows?.[0]?.totalTransfers ?? 0);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('relation "transfers" does not exist')) {
+        return 0;
+      }
+
+      throw error;
+    }
   }
 }

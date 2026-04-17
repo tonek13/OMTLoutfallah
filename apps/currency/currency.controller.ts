@@ -30,6 +30,7 @@ import {
   MintTokensDto,
   TenantResponseDto,
   CurrencyResponseDto,
+  CurrencyStatsResponseDto,
   WalletResponseDto,
 } from './dto/currency.dto';
 
@@ -140,6 +141,17 @@ export class CurrencyController {
   @ApiNotFoundResponse({ description: 'Currency not found for this tenant' })
   getCurrency(@Param('tenantId') tenantId: string, @Param('currencyId') currencyId: string) {
     return this.currencyService.getCurrency(currencyId, tenantId);
+  }
+
+  @Get('currencies/:id')
+  @ApiOperation({ summary: 'Get currency info and live stats for current tenant' })
+  @ApiParam({ name: 'id', description: 'Currency ID', format: 'uuid' })
+  @ApiOkResponse({ type: CurrencyStatsResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
+  @ApiForbiddenResponse({ description: 'You are not a member of this tenant' })
+  @ApiNotFoundResponse({ description: 'Currency not found' })
+  getCurrencyStats(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    return this.currencyService.getCurrencyStats(id, req.user.tenantId);
   }
 
   // MEMBERSHIPS
