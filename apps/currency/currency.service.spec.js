@@ -1,5 +1,5 @@
 const { CurrencyService } = require('./currency.service.ts');
-const { ForbiddenException, BadRequestException } = require('@nestjs/common');
+const { ForbiddenException, BadRequestException, ConflictException } = require('@nestjs/common');
 
 function createServiceWithWallets(seedWallets) {
   const walletRepo = {
@@ -307,6 +307,143 @@ describe('CurrencyService tenant isolation', () => {
       service.burnCurrencyFromAdmin('currency-1', 'admin-1', 'tenant-a', {
         amount: 50,
         reason: 'Test burn',
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('updates currency appearance and earn rules for tenant admin', async () => {
+    const currency = {
+      id: 'currency-1',
+      tenantId: 'tenant-a',
+      name: 'Campus Coin',
+      symbol: 'ACC',
+      color: '#111111',
+      expiryDays: 7,
+      earnRules: {},
+    };
+
+    const manager = {
+      findOne: jest.fn(async (entity) => {
+        if (entity?.name === 'Currency') return currency;
+        return null;
+      }),
+      count: jest.fn(async () => 0),
+      createQueryBuilder: jest.fn(() => ({
+        where() { return this; },
+        andWhere() { return this; },
+        getCount: jest.fn(async () => 0),
+      })),
+      save: jest.fn(async (_entity, value) => value),
+      create: jest.fn((_entity, payload) => payload),
+    };
+
+    const dataSource = {
+      transaction: jest.fn(async (work) => work(manager)),
+      query: jest.fn(async () => [{ totalTransfers: '0' }]),
+    };
+
+    const service = new CurrencyService({}, {}, {}, dataSource);
+    const result = await service.updateCurrency('currency-1', 'admin-1', 'tenant-a', {
+      name: 'Campus Coin X',
+      color: '#4caf50',
+      expiryDays: 30,
+      earnRules: {
+        purchase: { pointsPerDollar: 2, enabled: true, maxPerDay: 500 },
+      },
+    });
+
+    expect(result).toMatchObject({
+      name: 'Campus Coin X',
+      color: '#4caf50',
+      expiryDays: 30,
+    });
+    expect(result.earnRules).toEqual({
+      purchase: { pointsPerDollar: 2, enabled: true, maxPerDay: 500 },
+    });
+
+    const auditLogSaveCall = manager.save.mock.calls.find(
+      ([entity]) => entity?.name === 'AuditLog',
+    );
+    expect(auditLogSaveCall).toBeDefined();
+    expect(auditLogSaveCall[1]).toMatchObject({
+      tenantId: 'tenant-a',
+      actorUserId: 'admin-1',
+      eventType: 'currency.updated',
+      entityType: 'currency',
+      entityId: 'currency-1',
+    });
+  });
+
+  it('rejects symbol update after first wallet is created', async () => {
+    const manager = {
+      findOne: jest.fn(async (entity) => {
+        if (entity?.name === 'Currency') {
+          return {
+            id: 'currency-1',
+            tenantId: 'tenant-a',
+            name: 'Campus Coin',
+            symbol: 'ACC',
+          };
+        }
+        return null;
+      }),
+      count: jest.fn(async () => 1),
+      createQueryBuilder: jest.fn(() => ({
+        where() { return this; },
+        andWhere() { return this; },
+        getCount: jest.fn(async () => 0),
+      })),
+      save: jest.fn(async (_entity, value) => value),
+      create: jest.fn((_entity, payload) => payload),
+    };
+
+    const dataSource = {
+      transaction: jest.fn(async (work) => work(manager)),
+      query: jest.fn(async () => [{ totalTransfers: '0' }]),
+    };
+
+    const service = new CurrencyService({}, {}, {}, dataSource);
+
+    await expect(
+      service.updateCurrency('currency-1', 'admin-1', 'tenant-a', { symbol: 'NEW' }),
+    ).rejects.toThrow(ConflictException);
+  });
+
+  it('rejects update when earnRules schema is invalid', async () => {
+    const manager = {
+      findOne: jest.fn(async (entity) => {
+        if (entity?.name === 'Currency') {
+          return {
+            id: 'currency-1',
+            tenantId: 'tenant-a',
+            name: 'Campus Coin',
+            symbol: 'ACC',
+          };
+        }
+        return null;
+      }),
+      count: jest.fn(async () => 0),
+      createQueryBuilder: jest.fn(() => ({
+        where() { return this; },
+        andWhere() { return this; },
+        getCount: jest.fn(async () => 0),
+      })),
+      save: jest.fn(async (_entity, value) => value),
+      create: jest.fn((_entity, payload) => payload),
+    };
+
+    const dataSource = {
+      transaction: jest.fn(async (work) => work(manager)),
+      query: jest.fn(async () => [{ totalTransfers: '0' }]),
+    };
+
+    const service = new CurrencyService({}, {}, {}, dataSource);
+
+    await expect(
+      service.updateCurrency('currency-1', 'admin-1', 'tenant-a', {
+        earnRules: {
+          purchase: { enabled: true },
+        },
       }),
     ).rejects.toThrow(BadRequestException);
   });

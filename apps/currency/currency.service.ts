@@ -10,6 +10,7 @@ import { AuditLog } from './entities/audit-log.entity';
 import {
   UpdateTenantSettingsDto,
   CreateOrganizationCurrencyDto,
+  UpdateCurrencyDto,
   AddOrganizationMemberDto,
   MintTokensDto,
   MintCurrencyToRecipientDto,
@@ -105,6 +106,82 @@ export class CurrencyService {
       await manager.save(Wallet, adminWallet);
 
       return savedCurrency;
+    });
+  }
+
+  async updateCurrency(
+    currencyId: string,
+    actorUserId: string,
+    actorTenantId: string,
+    dto: UpdateCurrencyDto,
+  ): Promise<Currency> {
+    return this.dataSource.transaction(async (manager) => {
+      const currency = await manager.findOne(Currency, {
+        where: { id: currencyId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!currency) {
+        throw new NotFoundException('Currency not found');
+      }
+      if (currency.tenantId !== actorTenantId) {
+        throw new ForbiddenException('Tenant admin access denied');
+      }
+
+      if (dto.symbol !== undefined) {
+        const normalizedSymbol = dto.symbol.trim().toUpperCase();
+        if (normalizedSymbol !== currency.symbol) {
+          const walletCount = await manager.count(Wallet, {
+            where: { tenantId: actorTenantId, currencyId: currency.id },
+          });
+          if (walletCount > 0) {
+            throw new ConflictException('Cannot change symbol after first wallet is created');
+          }
+
+          const symbolExists = await manager
+            .createQueryBuilder(Currency, 'currency')
+            .where('currency.tenantId = :tenantId', { tenantId: actorTenantId })
+            .andWhere('UPPER(currency.symbol) = :symbol', { symbol: normalizedSymbol })
+            .andWhere('currency.id <> :currencyId', { currencyId: currency.id })
+            .getCount();
+
+          if (symbolExists > 0) {
+            throw new ConflictException(`Symbol "${dto.symbol}" already exists in this tenant`);
+          }
+
+          currency.symbol = normalizedSymbol;
+        }
+      }
+
+      if (dto.name !== undefined) {
+        currency.name = dto.name;
+      }
+      if (dto.color !== undefined) {
+        currency.color = dto.color;
+      }
+      if (dto.expiryDays !== undefined) {
+        currency.expiryDays = dto.expiryDays;
+      }
+      if (dto.earnRules !== undefined) {
+        this.validateEarnRulesSchema(dto.earnRules);
+        currency.earnRules = dto.earnRules;
+      }
+
+      const updatedCurrency = await manager.save(Currency, currency);
+
+      const auditLog = manager.create(AuditLog, {
+        tenantId: actorTenantId,
+        actorUserId,
+        eventType: 'currency.updated',
+        entityType: 'currency',
+        entityId: updatedCurrency.id,
+        payload: {
+          updatedFields: Object.keys(dto),
+        },
+      });
+
+      await manager.save(AuditLog, auditLog);
+      return updatedCurrency;
     });
   }
 
@@ -350,5 +427,78 @@ export class CurrencyService {
 
       throw error;
     }
+  }
+
+  private validateEarnRulesSchema(earnRules: unknown): void {
+    if (!this.isPlainObject(earnRules)) {
+      throw new BadRequestException('earnRules must be a JSON object');
+    }
+
+    const numericRewardFields = ['basePoints', 'points', 'pointsPerDollar', 'multiplier'] as const;
+    for (const [ruleKey, ruleValue] of Object.entries(earnRules)) {
+      if (!this.isPlainObject(ruleValue)) {
+        throw new BadRequestException(`earnRules.${ruleKey} must be a JSON object`);
+      }
+
+      const rule = ruleValue as Record<string, unknown>;
+      const hasNumericRewardField = numericRewardFields.some(
+        (field) => rule[field] !== undefined,
+      );
+      if (!hasNumericRewardField) {
+        throw new BadRequestException(
+          `earnRules.${ruleKey} must include one reward field: ${numericRewardFields.join(', ')}`,
+        );
+      }
+
+      for (const field of numericRewardFields) {
+        const fieldValue = rule[field];
+        if (fieldValue !== undefined && !this.isNonNegativeNumber(fieldValue)) {
+          throw new BadRequestException(`earnRules.${ruleKey}.${field} must be a non-negative number`);
+        }
+      }
+
+      if (rule.maxPerDay !== undefined) {
+        if (!Number.isInteger(rule.maxPerDay) || Number(rule.maxPerDay) < 1) {
+          throw new BadRequestException(`earnRules.${ruleKey}.maxPerDay must be an integer >= 1`);
+        }
+      }
+
+      if (rule.enabled !== undefined && typeof rule.enabled !== 'boolean') {
+        throw new BadRequestException(`earnRules.${ruleKey}.enabled must be boolean`);
+      }
+
+      if (rule.activityType !== undefined) {
+        if (typeof rule.activityType !== 'string' || rule.activityType.trim().length === 0) {
+          throw new BadRequestException(`earnRules.${ruleKey}.activityType must be a non-empty string`);
+        }
+      }
+
+      if (rule.conditions !== undefined) {
+        if (!this.isPlainObject(rule.conditions)) {
+          throw new BadRequestException(`earnRules.${ruleKey}.conditions must be a JSON object`);
+        }
+
+        for (const [conditionKey, conditionValue] of Object.entries(rule.conditions)) {
+          if (
+            typeof conditionValue !== 'string'
+            && typeof conditionValue !== 'number'
+            && typeof conditionValue !== 'boolean'
+            && conditionValue !== null
+          ) {
+            throw new BadRequestException(
+              `earnRules.${ruleKey}.conditions.${conditionKey} must be string, number, boolean, or null`,
+            );
+          }
+        }
+      }
+    }
+  }
+
+  private isPlainObject(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  private isNonNegativeNumber(value: unknown): boolean {
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0;
   }
 }
