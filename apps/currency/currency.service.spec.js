@@ -1,5 +1,5 @@
 const { CurrencyService } = require('./currency.service.ts');
-const { ForbiddenException } = require('@nestjs/common');
+const { ForbiddenException, BadRequestException } = require('@nestjs/common');
 
 function createServiceWithWallets(seedWallets) {
   const walletRepo = {
@@ -212,5 +212,102 @@ describe('CurrencyService tenant isolation', () => {
         reason: 'Test',
       }),
     ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('burns from admin wallet, decreases circulating supply, and writes an audit log', async () => {
+    const currency = {
+      id: 'currency-1',
+      tenantId: 'tenant-a',
+      circulatingSupply: '1000',
+    };
+    const adminWallet = {
+      id: 'wallet-admin-1',
+      userId: 'admin-1',
+      tenantId: 'tenant-a',
+      currencyId: 'currency-1',
+      balance: '300',
+    };
+
+    const manager = {
+      findOne: jest.fn(async (entity, options) => {
+        if (entity?.name === 'Currency') return currency;
+        if (entity?.name === 'Wallet') {
+          return options?.where?.userId === 'admin-1' ? adminWallet : null;
+        }
+        return null;
+      }),
+      save: jest.fn(async (_entity, value) => value),
+      create: jest.fn((_entity, payload) => payload),
+    };
+
+    const dataSource = {
+      transaction: jest.fn(async (work) => work(manager)),
+      query: jest.fn(async () => [{ totalTransfers: '0' }]),
+    };
+
+    const service = new CurrencyService({}, {}, {}, dataSource);
+    const result = await service.burnCurrencyFromAdmin(
+      'currency-1',
+      'admin-1',
+      'tenant-a',
+      { amount: 75, reason: 'Policy burn' },
+    );
+
+    expect(result.balance).toBe(225);
+    expect(currency.circulatingSupply).toBe(925);
+
+    const auditLogSaveCall = manager.save.mock.calls.find(
+      ([entity]) => entity?.name === 'AuditLog',
+    );
+
+    expect(auditLogSaveCall).toBeDefined();
+    expect(auditLogSaveCall[1]).toMatchObject({
+      tenantId: 'tenant-a',
+      actorUserId: 'admin-1',
+      eventType: 'currency.burned',
+      entityType: 'wallet',
+      entityId: 'wallet-admin-1',
+      payload: expect.objectContaining({
+        currencyId: 'currency-1',
+        amount: 75,
+        reason: 'Policy burn',
+      }),
+    });
+  });
+
+  it('rejects burn when admin wallet balance is insufficient', async () => {
+    const manager = {
+      findOne: jest.fn(async (entity, options) => {
+        if (entity?.name === 'Currency') {
+          return { id: 'currency-1', tenantId: 'tenant-a', circulatingSupply: '1000' };
+        }
+        if (entity?.name === 'Wallet') {
+          return {
+            id: 'wallet-admin-1',
+            userId: options?.where?.userId,
+            tenantId: 'tenant-a',
+            currencyId: 'currency-1',
+            balance: '20',
+          };
+        }
+        return null;
+      }),
+      save: jest.fn(async (_entity, value) => value),
+      create: jest.fn((_entity, payload) => payload),
+    };
+
+    const dataSource = {
+      transaction: jest.fn(async (work) => work(manager)),
+      query: jest.fn(async () => [{ totalTransfers: '0' }]),
+    };
+
+    const service = new CurrencyService({}, {}, {}, dataSource);
+
+    await expect(
+      service.burnCurrencyFromAdmin('currency-1', 'admin-1', 'tenant-a', {
+        amount: 50,
+        reason: 'Test burn',
+      }),
+    ).rejects.toThrow(BadRequestException);
   });
 });

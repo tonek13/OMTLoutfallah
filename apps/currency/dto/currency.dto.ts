@@ -1,9 +1,9 @@
 import {
   IsString, IsOptional, IsNumber, IsHexColor,
-  IsPositive, MinLength, MaxLength, Min, IsInt,
+  IsPositive, MinLength, MaxLength, Min, IsInt, ValidateIf,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { CurrencyStatus } from '../entities/currency.entity';
 import { TenantPlan, TenantStatus } from '../../auth-service/src/modules/tenants/tenant.entity';
 
@@ -149,6 +149,47 @@ export class BurnCurrencyDto {
   @IsOptional()
   @IsString()
   reason?: string;
+}
+
+export class UpdateCurrencyDto {
+  @ApiPropertyOptional({ example: 'Campus Coin Plus' })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  name?: string;
+
+  @ApiPropertyOptional({ example: '#4caf50' })
+  @IsOptional()
+  @IsHexColor()
+  color?: string;
+
+  @ApiPropertyOptional({ description: 'JSON earn rules definition' })
+  @IsOptional()
+  earnRules?: Record<string, unknown>;
+
+  @ApiPropertyOptional({ example: 30, description: 'Days before earned tokens expire. Null = never.' })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === null || value === undefined || value === '') {
+      return value;
+    }
+    return Number(value);
+  })
+  @ValidateIf((_obj, value) => value !== null && value !== undefined)
+  @IsInt()
+  @Min(1)
+  expiryDays?: number | null;
+
+  @ApiPropertyOptional({
+    example: 'ACC',
+    description: 'Can only be changed before the first wallet exists for this currency',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(10)
+  symbol?: string;
 }
 
 export class TenantResponseDto {

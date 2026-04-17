@@ -1,5 +1,5 @@
 import {
-  Injectable, NotFoundException, ConflictException, ForbiddenException,
+  Injectable, NotFoundException, ConflictException, ForbiddenException, BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -13,6 +13,7 @@ import {
   AddOrganizationMemberDto,
   MintTokensDto,
   MintCurrencyToRecipientDto,
+  BurnCurrencyDto,
 } from './dto/currency.dto';
 
 @Injectable()
@@ -246,6 +247,73 @@ export class CurrencyService {
         payload: {
           currencyId,
           recipientId: dto.recipientId,
+          amount: dto.amount,
+          reason: dto.reason ?? null,
+          walletBalanceBefore: previousWalletBalance,
+          walletBalanceAfter: Number(updatedWallet.balance),
+          circulatingSupplyBefore: previousCirculatingSupply,
+          circulatingSupplyAfter: Number(updatedCurrency.circulatingSupply),
+        },
+      });
+
+      await manager.save(AuditLog, auditLog);
+
+      return updatedWallet;
+    });
+  }
+
+  async burnCurrencyFromAdmin(
+    currencyId: string,
+    actorUserId: string,
+    actorTenantId: string,
+    dto: BurnCurrencyDto,
+  ): Promise<Wallet> {
+    return this.dataSource.transaction(async (manager) => {
+      const currency = await manager.findOne(Currency, {
+        where: { id: currencyId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!currency) throw new NotFoundException('Currency not found');
+      if (currency.tenantId !== actorTenantId) {
+        throw new ForbiddenException('Tenant admin access denied');
+      }
+
+      const adminWallet = await manager.findOne(Wallet, {
+        where: {
+          tenantId: actorTenantId,
+          currencyId,
+          userId: actorUserId,
+        },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!adminWallet) {
+        throw new NotFoundException('Admin wallet not found for this currency');
+      }
+
+      const previousWalletBalance = Number(adminWallet.balance);
+      const previousCirculatingSupply = Number(currency.circulatingSupply);
+
+      if (previousWalletBalance < dto.amount) {
+        throw new BadRequestException('Insufficient admin wallet balance');
+      }
+      if (previousCirculatingSupply < dto.amount) {
+        throw new BadRequestException('Insufficient circulating supply');
+      }
+
+      adminWallet.balance = previousWalletBalance - dto.amount;
+      currency.circulatingSupply = previousCirculatingSupply - dto.amount;
+
+      const updatedCurrency = await manager.save(Currency, currency);
+      const updatedWallet = await manager.save(Wallet, adminWallet);
+
+      const auditLog = manager.create(AuditLog, {
+        tenantId: actorTenantId,
+        actorUserId,
+        eventType: 'currency.burned',
+        entityType: 'wallet',
+        entityId: updatedWallet.id,
+        payload: {
+          currencyId,
           amount: dto.amount,
           reason: dto.reason ?? null,
           walletBalanceBefore: previousWalletBalance,
