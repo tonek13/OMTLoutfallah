@@ -40,6 +40,12 @@ export class TransferResponseDto {
   @ApiProperty({ example: 'fb6ba9bd-d2f7-42a3-a623-9302c9c317ff' })
   id!: string;
 
+  @ApiProperty({ example: '9ec4feba-d622-4650-84f2-5220e4eb53d2' })
+  senderId!: string;
+
+  @ApiPropertyOptional({ example: '8e80e385-0cfa-4f90-b4ca-74f52ad648e2' })
+  tenantId?: string | null;
+
   @ApiProperty({ example: 'OMT-2026-X9A31F' })
   referenceCode!: string;
 

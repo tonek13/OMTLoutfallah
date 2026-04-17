@@ -1,6 +1,6 @@
 import {
   Controller, Post, Get, Patch, Body, Param,
-  Query, Req, UseGuards, HttpCode, HttpStatus,
+  Query, Req, UseGuards, HttpCode, HttpStatus, BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -86,6 +86,43 @@ export class TransferController {
     return this.transferService.getUserTransfers(req.user.sub, +page, +limit);
   }
 
+  @Get('received')
+  @ApiOperation({ summary: 'Get transfers received by my phone number in my tenant' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (1-based)',
+    schema: { type: 'integer', minimum: 1, default: 1 },
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Records per page',
+    schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+  })
+  @ApiOkResponse({
+    description: 'Paginated received transfer list',
+    type: TransferListResponseDto,
+  })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
+  @ApiBadRequestResponse({ description: 'User phone is missing in access token payload' })
+  async getReceivedTransfers(
+    @Req() req: AuthenticatedRequest,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+  ) {
+    if (!req.user.phone) {
+      throw new BadRequestException('User phone is missing in access token payload');
+    }
+
+    return this.transferService.getReceivedTransfers(
+      req.user.phone,
+      req.user.tenantId,
+      +page,
+      +limit,
+    );
+  }
+
   @Get(':reference')
   @ApiOperation({ summary: 'Get transfer by reference code' })
   @ApiParam({
@@ -98,7 +135,12 @@ export class TransferController {
   @ApiForbiddenResponse({ description: 'Transfer does not belong to requester' })
   @ApiNotFoundResponse({ description: 'Transfer not found' })
   async getOne(@Param('reference') ref: string, @Req() req: AuthenticatedRequest) {
-    return this.transferService.getByReference(ref, req.user.sub);
+    return this.transferService.getByReference(
+      ref,
+      req.user.sub,
+      req.user.phone,
+      req.user.tenantId,
+    );
   }
 
   @Patch(':id/cancel')

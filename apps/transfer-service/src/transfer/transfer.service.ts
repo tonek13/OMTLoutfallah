@@ -132,10 +132,23 @@ export class TransferService {
   }
 
   // ─── Get Transfer by Reference ─────────────────────────────────────
-  async getByReference(referenceCode: string, requesterId: string) {
+  async getByReference(
+    referenceCode: string,
+    requesterId: string,
+    requesterPhone?: string,
+    requesterTenantId?: string,
+  ) {
     const transfer = await this.transferRepo.findOne({ where: { referenceCode } });
     if (!transfer) throw new NotFoundException('Transfer not found');
-    if (transfer.senderId !== requesterId) throw new ForbiddenException();
+
+    const isSender = transfer.senderId === requesterId;
+    const isReceiver =
+      Boolean(requesterPhone)
+      && Boolean(requesterTenantId)
+      && transfer.receiverPhone === requesterPhone
+      && transfer.tenantId === requesterTenantId;
+
+    if (!isSender && !isReceiver) throw new ForbiddenException();
     return this.toResponse(transfer);
   }
 
@@ -143,6 +156,21 @@ export class TransferService {
   async getUserTransfers(senderId: string, page = 1, limit = 20) {
     const [transfers, total] = await this.transferRepo.findAndCount({
       where: { senderId },
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      data: transfers.map(this.toResponse),
+      meta: { total, page, limit, pages: Math.ceil(total / limit) },
+    };
+  }
+
+  // â”€â”€â”€ Get Received Transfers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  async getReceivedTransfers(receiverPhone: string, tenantId: string, page = 1, limit = 20) {
+    const [transfers, total] = await this.transferRepo.findAndCount({
+      where: { receiverPhone, tenantId },
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
@@ -241,6 +269,8 @@ export class TransferService {
   private toResponse(transfer: Transfer) {
     return {
       id: transfer.id,
+      senderId: transfer.senderId,
+      tenantId: transfer.tenantId,
       referenceCode: transfer.referenceCode,
       status: transfer.status,
       amount: transfer.amount,
