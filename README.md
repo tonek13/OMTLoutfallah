@@ -2,6 +2,10 @@
 
 Multi-tenant backend (NestJS monorepo) with auth, tenants, currencies, wallets, and transfers.
 
+## Project Status
+
+This project is currently **frozen/paused for a while** and not under active feature development.
+
 ## Services
 
 | Service | Port | Base URL |
