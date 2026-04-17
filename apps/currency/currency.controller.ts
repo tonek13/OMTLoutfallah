@@ -1,6 +1,6 @@
 import {
   Controller, Post, Get, Patch, Body, Param,
-  UseGuards, Request, HttpCode, HttpStatus, BadRequestException,
+  UseGuards, Request, HttpCode, HttpStatus, BadRequestException, ForbiddenException, Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -28,8 +28,15 @@ import {
   CreateOrganizationCurrencyDto,
   AddOrganizationMemberDto,
   MintTokensDto,
+  MintCurrencyToRecipientDto,
+  BurnCurrencyDto,
+  UpdateCurrencyDto,
+  CurrencyTransactionsQueryDto,
+  CurrencyTransactionsResponseDto,
+  CurrencyPanelStatsResponseDto,
   TenantResponseDto,
   CurrencyResponseDto,
+  CurrencyStatsResponseDto,
   WalletResponseDto,
 } from './dto/currency.dto';
 
@@ -96,8 +103,30 @@ export class CurrencyController {
   @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
   @ApiForbiddenResponse({ description: 'Tenant admin access denied' })
   @ApiConflictResponse({ description: 'Currency symbol already exists in this tenant' })
-  createCurrency(@Param('tenantId') tenantId: string, @Body() dto: CreateOrganizationCurrencyDto) {
-    return this.currencyService.createCurrency(tenantId, dto);
+  createCurrency(
+    @Param('tenantId') tenantId: string,
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: CreateOrganizationCurrencyDto,
+  ) {
+    return this.currencyService.createCurrency(tenantId, req.user.id, dto);
+  }
+
+  @Post('currencies')
+  @UseGuards(TenantAdminGuard)
+  @ApiOperation({ summary: 'Create a currency for the current tenant' })
+  @ApiBody({ type: CreateOrganizationCurrencyDto })
+  @ApiCreatedResponse({
+    description: 'Currency created successfully',
+    type: CurrencyResponseDto,
+  })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
+  @ApiForbiddenResponse({ description: 'Tenant admin access denied' })
+  @ApiConflictResponse({ description: 'Currency symbol already exists in this tenant' })
+  createCurrencyForCurrentTenant(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: CreateOrganizationCurrencyDto,
+  ) {
+    return this.currencyService.createCurrency(req.user.tenantId, req.user.id, dto);
   }
 
   @Get('tenants/:tenantId/currencies')
@@ -118,6 +147,89 @@ export class CurrencyController {
   @ApiNotFoundResponse({ description: 'Currency not found for this tenant' })
   getCurrency(@Param('tenantId') tenantId: string, @Param('currencyId') currencyId: string) {
     return this.currencyService.getCurrency(currencyId, tenantId);
+  }
+
+  @Patch('currencies/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update currency appearance and earn rules (tenant admin only)' })
+  @ApiParam({ name: 'id', description: 'Currency ID', format: 'uuid' })
+  @ApiBody({ type: UpdateCurrencyDto })
+  @ApiOkResponse({ type: CurrencyResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
+  @ApiForbiddenResponse({ description: 'Tenant admin access denied' })
+  @ApiNotFoundResponse({ description: 'Currency not found' })
+  @ApiConflictResponse({ description: 'Symbol cannot be changed once wallets exist' })
+  @ApiBadRequestResponse({ description: 'Invalid earnRules schema' })
+  updateCurrency(
+    @Param('id') currencyId: string,
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: UpdateCurrencyDto,
+  ) {
+    if (req.user.role !== UserRole.TENANT_ADMIN) {
+      throw new ForbiddenException('Tenant admin access denied');
+    }
+
+    return this.currencyService.updateCurrency(
+      currencyId,
+      req.user.id,
+      req.user.tenantId,
+      dto,
+    );
+  }
+
+  @Get('currencies/:id/transactions')
+  @ApiOperation({ summary: 'Get mint/burn/transfer transactions for a currency (tenant admin only)' })
+  @ApiParam({ name: 'id', description: 'Currency ID', format: 'uuid' })
+  @ApiOkResponse({ type: CurrencyTransactionsResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
+  @ApiForbiddenResponse({ description: 'Tenant admin access denied' })
+  @ApiNotFoundResponse({ description: 'Currency not found' })
+  getCurrencyTransactions(
+    @Param('id') currencyId: string,
+    @Request() req: AuthenticatedRequest,
+    @Query() query: CurrencyTransactionsQueryDto,
+  ) {
+    if (req.user.role !== UserRole.TENANT_ADMIN) {
+      throw new ForbiddenException('Tenant admin access denied');
+    }
+
+    return this.currencyService.getCurrencyTransactions(
+      currencyId,
+      req.user.tenantId,
+      query,
+    );
+  }
+
+  @Get('currencies/:id/stats')
+  @ApiOperation({ summary: 'Get aggregated currency panel stats (tenant admin only)' })
+  @ApiParam({ name: 'id', description: 'Currency ID', format: 'uuid' })
+  @ApiOkResponse({ type: CurrencyPanelStatsResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
+  @ApiForbiddenResponse({ description: 'Tenant admin access denied' })
+  @ApiNotFoundResponse({ description: 'Currency not found' })
+  getCurrencyPanelStats(
+    @Param('id') currencyId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    if (req.user.role !== UserRole.TENANT_ADMIN) {
+      throw new ForbiddenException('Tenant admin access denied');
+    }
+
+    return this.currencyService.getCurrencyPanelStats(
+      currencyId,
+      req.user.tenantId,
+    );
+  }
+
+  @Get('currencies/:id')
+  @ApiOperation({ summary: 'Get currency info and live stats for current tenant' })
+  @ApiParam({ name: 'id', description: 'Currency ID', format: 'uuid' })
+  @ApiOkResponse({ type: CurrencyStatsResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
+  @ApiForbiddenResponse({ description: 'You are not a member of this tenant' })
+  @ApiNotFoundResponse({ description: 'Currency not found' })
+  getCurrencyStats(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    return this.currencyService.getCurrencyStats(id, req.user.tenantId);
   }
 
   // MEMBERSHIPS
@@ -182,5 +294,64 @@ export class CurrencyController {
   @ApiNotFoundResponse({ description: 'Membership wallet or currency not found' })
   mintTokens(@Param('tenantId') tenantId: string, @Body() dto: MintTokensDto) {
     return this.currencyService.mintTokens(tenantId, dto);
+  }
+
+  @Post('currencies/:id/mint')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Mint tokens to a tenant member's wallet (tenant admin only)" })
+  @ApiParam({ name: 'id', description: 'Currency ID', format: 'uuid' })
+  @ApiBody({ type: MintCurrencyToRecipientDto })
+  @ApiOkResponse({
+    description: 'Wallet balance updated after minting',
+    type: WalletResponseDto,
+  })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
+  @ApiForbiddenResponse({ description: 'Tenant admin access denied' })
+  @ApiNotFoundResponse({ description: 'Currency or recipient wallet not found' })
+  mintToRecipientWallet(
+    @Param('id') currencyId: string,
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: MintCurrencyToRecipientDto,
+  ) {
+    if (req.user.role !== UserRole.TENANT_ADMIN) {
+      throw new ForbiddenException('Tenant admin access denied');
+    }
+
+    return this.currencyService.mintCurrencyToRecipient(
+      currencyId,
+      req.user.id,
+      req.user.tenantId,
+      dto,
+    );
+  }
+
+  @Post('currencies/:id/burn')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Burn tokens from the tenant admin's wallet (tenant admin only)" })
+  @ApiParam({ name: 'id', description: 'Currency ID', format: 'uuid' })
+  @ApiBody({ type: BurnCurrencyDto })
+  @ApiOkResponse({
+    description: 'Wallet balance updated after burn',
+    type: WalletResponseDto,
+  })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
+  @ApiForbiddenResponse({ description: 'Tenant admin access denied' })
+  @ApiNotFoundResponse({ description: 'Currency or admin wallet not found' })
+  @ApiBadRequestResponse({ description: 'Insufficient admin wallet balance or circulating supply' })
+  burnFromAdminWallet(
+    @Param('id') currencyId: string,
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: BurnCurrencyDto,
+  ) {
+    if (req.user.role !== UserRole.TENANT_ADMIN) {
+      throw new ForbiddenException('Tenant admin access denied');
+    }
+
+    return this.currencyService.burnCurrencyFromAdmin(
+      currencyId,
+      req.user.id,
+      req.user.tenantId,
+      dto,
+    );
   }
 }
