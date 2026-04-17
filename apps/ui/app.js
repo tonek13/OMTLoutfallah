@@ -46,9 +46,11 @@ const state = {
   wallets: [],
   transfers: [],
   transferMeta: null,
+  transferMode: 'sent',
   currencyTransactions: [],
   currencyTransactionsMeta: null,
   currencyStats: null,
+  memberCurrencyStats: null,
   knownIds: {
     tenantId: '',
     currencyId: '',
@@ -88,6 +90,7 @@ const elements = {
   currencySnapshot: document.getElementById('currencySnapshot'),
   walletSnapshot: document.getElementById('walletSnapshot'),
   transferSnapshot: document.getElementById('transferSnapshot'),
+  memberCurrencySnapshot: document.getElementById('memberCurrencySnapshot'),
 
   // tenant table
   loadTenantsBtn: document.getElementById('loadTenantsBtn'),
@@ -116,13 +119,24 @@ const elements = {
 
   // wallets
   walletTenantSelect: document.getElementById('walletTenantSelect'),
+  memberCurrencyTenantSelect: document.getElementById('memberCurrencyTenantSelect'),
+  memberCurrencySelect: document.getElementById('memberCurrencySelect'),
+  loadMemberCurrencyBtn: document.getElementById('loadMemberCurrencyBtn'),
   loadWalletsBtn: document.getElementById('loadWalletsBtn'),
   walletsTableBody: document.getElementById('walletsTableBody'),
+  memberCurrencyName: document.getElementById('memberCurrencyName'),
+  memberCurrencySymbol: document.getElementById('memberCurrencySymbol'),
+  memberCurrencyCirculating: document.getElementById('memberCurrencyCirculating'),
+  memberCurrencyWallets: document.getElementById('memberCurrencyWallets'),
+  memberCurrencyTransfers: document.getElementById('memberCurrencyTransfers'),
 
   // transfers
   loadTransfersBtn: document.getElementById('loadTransfersBtn'),
+  loadSentTransfersBtn: document.getElementById('loadSentTransfersBtn'),
+  loadReceivedTransfersBtn: document.getElementById('loadReceivedTransfersBtn'),
   transferPageInput: document.getElementById('transferPageInput'),
   transferLimitInput: document.getElementById('transferLimitInput'),
+  transferModeHint: document.getElementById('transferModeHint'),
   transfersMeta: document.getElementById('transfersMeta'),
   transfersTableBody: document.getElementById('transfersTableBody'),
 
@@ -430,6 +444,11 @@ const applyContextToInputs = () => {
     transferRefInput.value = knownTransferRef;
   }
 
+  const registerTenantManualInput = elements.registerUserForm?.querySelector('input[name="tenantIdManual"]');
+  if (registerTenantManualInput && state.knownIds.tenantId && !registerTenantManualInput.value.trim()) {
+    registerTenantManualInput.value = state.knownIds.tenantId;
+  }
+
   const transferIdInput = elements.cancelTransferForm?.querySelector('input[name="id"]');
   if (transferIdInput && knownTransferId && !transferIdInput.value.trim()) {
     transferIdInput.value = knownTransferId;
@@ -484,9 +503,11 @@ const clearSession = () => {
   state.wallets = [];
   state.transfers = [];
   state.transferMeta = null;
+  state.transferMode = 'sent';
   state.currencyTransactions = [];
   state.currencyTransactionsMeta = null;
   state.currencyStats = null;
+  state.memberCurrencyStats = null;
   state.knownIds = {
     tenantId: '',
     currencyId: '',
@@ -502,9 +523,11 @@ const clearSession = () => {
   renderTenantsTable();
   renderCurrenciesTable();
   renderWalletsTable();
+  setTransferMode(state.transferMode);
   renderTransfersTable();
   renderCurrencyTransactionsTable();
   renderCurrencyMetrics();
+  renderMemberCurrencyMetrics();
   renderTransferMeta();
   renderTransactionsMeta();
   renderTenantSelects();
@@ -788,13 +811,36 @@ function renderWalletsTable() {
     .join('');
 }
 
+function setTransferMode(mode) {
+  const safeMode = mode === 'received' ? 'received' : 'sent';
+  state.transferMode = safeMode;
+
+  if (elements.transferModeHint) {
+    elements.transferModeHint.textContent =
+      safeMode === 'sent'
+        ? 'Viewing sent transfers.'
+        : 'Viewing received transfers.';
+  }
+
+  if (elements.loadSentTransfersBtn) {
+    elements.loadSentTransfersBtn.classList.toggle('btn-secondary', safeMode === 'sent');
+    elements.loadSentTransfersBtn.classList.toggle('btn-ghost', safeMode !== 'sent');
+  }
+
+  if (elements.loadReceivedTransfersBtn) {
+    elements.loadReceivedTransfersBtn.classList.toggle('btn-secondary', safeMode === 'received');
+    elements.loadReceivedTransfersBtn.classList.toggle('btn-ghost', safeMode !== 'received');
+  }
+}
+
 function renderTransferMeta(meta = state.transferMeta) {
   if (!elements.transfersMeta) return;
   if (!meta) {
     elements.transfersMeta.textContent = 'No data.';
     return;
   }
-  elements.transfersMeta.textContent = `Page ${meta.page} of ${meta.pages} | total ${meta.total}`;
+  const modeLabel = state.transferMode === 'received' ? 'received' : 'sent';
+  elements.transfersMeta.textContent = `${modeLabel}: page ${meta.page} of ${meta.pages} | total ${meta.total}`;
 }
 
 function renderTransfersTable() {
@@ -806,28 +852,55 @@ function renderTransfersTable() {
   }
 
   elements.transfersTableBody.innerHTML = state.transfers
-    .map(
-      (transfer) => `
+    .map((transfer) => {
+      const counterparty = state.transferMode === 'received'
+        ? (transfer.senderId ? `${transfer.senderId.slice(0, 8)}...` : '-')
+        : (transfer.receiverName || transfer.receiverPhone || '-');
+      const canCancel = state.transferMode === 'sent' && String(transfer.status || '').toUpperCase() === 'PENDING';
+      const transferId = transfer.id || '';
+      const transferReference = transfer.referenceCode || '';
+
+      return `
         <tr>
           <td class="code">${escapeHtml(transfer.referenceCode || '-')}</td>
           <td>${escapeHtml(transfer.status || '-')}</td>
           <td>${escapeHtml(formatNumber(transfer.totalAmount ?? transfer.amount))} ${escapeHtml(transfer.currency || '')}</td>
           <td>${escapeHtml(transfer.type || '-')}</td>
-          <td>${escapeHtml(transfer.receiverName || '-') }</td>
+          <td>${escapeHtml(counterparty)}</td>
           <td>${escapeHtml(formatDateTime(transfer.createdAt))}</td>
           <td>
-            <button
-              class="btn btn-ghost"
-              type="button"
-              data-bind-transfer-id="${escapeAttr(transfer.id || '')}"
-              data-bind-transfer-ref="${escapeAttr(transfer.referenceCode || '')}"
-            >
-              Bind
-            </button>
+            <div class="row-actions">
+              <button
+                class="btn btn-ghost"
+                type="button"
+                data-bind-transfer-id="${escapeAttr(transferId)}"
+                data-bind-transfer-ref="${escapeAttr(transferReference)}"
+              >
+                Use
+              </button>
+              <button
+                class="btn btn-ghost"
+                type="button"
+                data-open-transfer-ref="${escapeAttr(transferReference)}"
+              >
+                Open
+              </button>
+              ${canCancel
+    ? `
+                <button
+                  class="btn btn-ghost"
+                  type="button"
+                  data-cancel-transfer-id="${escapeAttr(transferId)}"
+                >
+                  Cancel
+                </button>
+              `
+    : ''}
+            </div>
           </td>
         </tr>
-      `,
-    )
+      `;
+    })
     .join('');
 }
 
@@ -874,6 +947,28 @@ function renderCurrencyMetrics(stats = state.currencyStats) {
   renderDailyVolumeChart(stats?.dailyVolume || []);
 }
 
+function renderMemberCurrencyMetrics(stats = state.memberCurrencyStats) {
+  if (elements.memberCurrencyName) {
+    elements.memberCurrencyName.textContent = stats?.name || '-';
+  }
+  if (elements.memberCurrencySymbol) {
+    elements.memberCurrencySymbol.textContent = stats?.symbol || '-';
+  }
+  if (elements.memberCurrencyCirculating) {
+    elements.memberCurrencyCirculating.textContent = stats ? formatNumber(stats.circulatingSupply) : '0';
+  }
+  if (elements.memberCurrencyWallets) {
+    elements.memberCurrencyWallets.textContent = stats ? formatNumber(stats.totalWallets) : '0';
+  }
+  if (elements.memberCurrencyTransfers) {
+    elements.memberCurrencyTransfers.textContent = stats ? formatNumber(stats.totalTransfers) : '0';
+  }
+
+  if (elements.memberCurrencySnapshot) {
+    elements.memberCurrencySnapshot.textContent = stats ? prettyJson(stats) : 'No currency data.';
+  }
+}
+
 function renderDailyVolumeChart(points) {
   if (!elements.dailyVolumeChart) return;
 
@@ -916,6 +1011,11 @@ const bindTenantContext = async (tenantId) => {
     loadCurrencies(tenantId, { silent: true }),
     loadWallets(tenantId, { silent: true }),
   ]);
+
+  const currencyId = getActiveCurrencyId();
+  if (currencyId) {
+    await loadMemberCurrencyStats(currencyId, { silent: true });
+  }
 };
 
 const loadTenants = async ({ silent = false } = {}) => {
@@ -945,8 +1045,10 @@ const loadTenants = async ({ silent = false } = {}) => {
 const loadCurrencies = async (tenantId, { silent = false } = {}) => {
   if (!isNonEmptyString(tenantId)) {
     state.currencies = [];
+    state.memberCurrencyStats = null;
     renderCurrenciesTable();
     renderCurrencySelects();
+    renderMemberCurrencyMetrics();
     return { ok: true, response: [] };
   }
 
@@ -965,6 +1067,12 @@ const loadCurrencies = async (tenantId, { silent = false } = {}) => {
     }
     renderCurrenciesTable();
     renderCurrencySelects();
+    if (state.knownIds.currencyId) {
+      await loadMemberCurrencyStats(state.knownIds.currencyId, { silent: true });
+    } else {
+      state.memberCurrencyStats = null;
+      renderMemberCurrencyMetrics();
+    }
   } else if (!silent) {
     const details = extractErrorMessage(result.response) || `${result.status} ${result.statusText}`;
     setFlash(`Load currencies failed: ${details}`, 'error');
@@ -1006,17 +1114,22 @@ const loadWallets = async (tenantId, { silent = false } = {}) => {
   return result;
 };
 
-const loadTransfers = async (page, limit, { silent = false } = {}) => {
+const loadTransfers = async (page, limit, { silent = false, mode = state.transferMode } = {}) => {
   const safePage = parsePage(page, 1);
   const safeLimit = parseLimit(limit, 20);
+  const safeMode = mode === 'received' ? 'received' : 'sent';
+  const path = safeMode === 'received'
+    ? `/transfers/received?page=${safePage}&limit=${safeLimit}`
+    : `/transfers?page=${safePage}&limit=${safeLimit}`;
 
   const result = await apiRequest({
     service: 'transfer',
-    path: `/transfers?page=${safePage}&limit=${safeLimit}`,
+    path,
     method: 'GET',
   });
 
   if (result.ok) {
+    setTransferMode(safeMode);
     state.transfers = Array.isArray(result.response?.data) ? result.response.data : [];
     state.transferMeta = result.response?.meta || null;
     captureKnownIds(result.response);
@@ -1065,6 +1178,31 @@ const loadCurrencyTransactions = async (currencyId, { type = '', page = 1, limit
   return result;
 };
 
+const loadMemberCurrencyStats = async (currencyId, { silent = false } = {}) => {
+  if (!isNonEmptyString(currencyId)) {
+    state.memberCurrencyStats = null;
+    renderMemberCurrencyMetrics();
+    return { ok: false, response: { message: 'Currency ID is required' } };
+  }
+
+  const result = await apiRequest({
+    service: 'organization',
+    path: `/currencies/${encodeURIComponent(currencyId)}`,
+    method: 'GET',
+  });
+
+  if (result.ok) {
+    state.memberCurrencyStats = result.response || null;
+    renderMemberCurrencyMetrics();
+    writeSnapshot(elements.memberCurrencySnapshot, result.response);
+  } else if (!silent) {
+    const details = extractErrorMessage(result.response) || `${result.status} ${result.statusText}`;
+    setFlash(`Load currency insights failed: ${details}`, 'error');
+  }
+
+  return result;
+};
+
 const loadCurrencyStats = async (currencyId, { silent = false } = {}) => {
   if (!isNonEmptyString(currencyId)) {
     state.currencyStats = null;
@@ -1107,20 +1245,29 @@ const syncAllData = async () => {
   await Promise.allSettled([
     loadCurrencies(tenantId, { silent: true }),
     loadWallets(tenantId, { silent: true }),
-    loadTransfers(elements.transferPageInput?.value || 1, elements.transferLimitInput?.value || 20, { silent: true }),
+    loadTransfers(
+      elements.transferPageInput?.value || 1,
+      elements.transferLimitInput?.value || 20,
+      { silent: true, mode: state.transferMode },
+    ),
   ]);
 
   const currencyId = getActiveCurrencyId();
   if (currencyId) {
-    await Promise.allSettled([
-      loadCurrencyStats(currencyId, { silent: true }),
-      loadCurrencyTransactions(currencyId, {
-        type: elements.transactionTypeFilter?.value || '',
-        page: elements.transactionPageInput?.value || 1,
-        limit: elements.transactionLimitInput?.value || 20,
-        silent: true,
-      }),
-    ]);
+    const tasks = [loadMemberCurrencyStats(currencyId, { silent: true })];
+    if (isAdminRole(state.claims?.role)) {
+      tasks.push(
+        loadCurrencyStats(currencyId, { silent: true }),
+        loadCurrencyTransactions(currencyId, {
+          type: elements.transactionTypeFilter?.value || '',
+          page: elements.transactionPageInput?.value || 1,
+          limit: elements.transactionLimitInput?.value || 20,
+          silent: true,
+        }),
+      );
+    }
+
+    await Promise.allSettled(tasks);
   }
 
   refreshContextUi();
@@ -1242,10 +1389,24 @@ const bindContextSelectors = () => {
   });
 
   getCurrencySelects().forEach((select) => {
-    select.addEventListener('change', () => {
+    select.addEventListener('change', async () => {
       if (!isNonEmptyString(select.value)) return;
       setKnownId('currencyId', select.value);
       refreshContextUi();
+
+      await loadMemberCurrencyStats(select.value, { silent: true });
+
+      if (isAdminRole(state.claims?.role)) {
+        await Promise.allSettled([
+          loadCurrencyStats(select.value, { silent: true }),
+          loadCurrencyTransactions(select.value, {
+            type: elements.transactionTypeFilter?.value || '',
+            page: elements.transactionPageInput?.value || 1,
+            limit: elements.transactionLimitInput?.value || 20,
+            silent: true,
+          }),
+        ]);
+      }
     });
   });
 
@@ -1287,7 +1448,51 @@ const bindTableActions = () => {
     setFlash(`Wallet context set: ${walletId}`);
   });
 
-  elements.transfersTableBody?.addEventListener('click', (event) => {
+  elements.transfersTableBody?.addEventListener('click', async (event) => {
+    const openButton = event.target.closest('button[data-open-transfer-ref]');
+    if (openButton) {
+      const reference = openButton.dataset.openTransferRef;
+      if (!reference) return;
+
+      await runAction('Open transfer', async () =>
+        apiRequest({
+          service: 'transfer',
+          path: `/transfers/${encodeURIComponent(reference)}`,
+          method: 'GET',
+        }), {
+        onSuccess: async (result) => {
+          writeSnapshot(elements.transferSnapshot, result.response);
+        },
+      });
+      return;
+    }
+
+    const cancelButton = event.target.closest('button[data-cancel-transfer-id]');
+    if (cancelButton) {
+      const transferId = cancelButton.dataset.cancelTransferId;
+      if (!transferId) return;
+
+      await runAction('Cancel transfer', async () =>
+        apiRequest({
+          service: 'transfer',
+          path: `/transfers/${encodeURIComponent(transferId)}/cancel`,
+          method: 'PATCH',
+        }), {
+        onSuccess: async (result) => {
+          writeSnapshot(elements.transferSnapshot, result.response);
+          await loadTransfers(
+            elements.transferPageInput?.value || 1,
+            elements.transferLimitInput?.value || 20,
+            {
+              silent: true,
+              mode: state.transferMode,
+            },
+          );
+        },
+      });
+      return;
+    }
+
     const button = event.target.closest('button[data-bind-transfer-id]');
     if (!button) return;
     if (button.dataset.bindTransferId) setKnownId('transferId', button.dataset.bindTransferId);
@@ -1339,6 +1544,14 @@ const bindActions = () => {
   bindFormSubmit(elements.registerUserForm, async (form) => {
     await runAction('Register user', async () => {
       const values = removeEmptyValues(collectForm(form));
+      const tenantId = values.tenantIdManual || values.tenantId;
+      if (!isNonEmptyString(tenantId)) {
+        throw new Error('Tenant is required');
+      }
+
+      values.tenantId = tenantId;
+      delete values.tenantIdManual;
+
       return apiRequest({
         service: 'auth',
         path: '/auth/register',
@@ -1346,6 +1559,25 @@ const bindActions = () => {
         body: values,
         withAuth: false,
       });
+    }, {
+      onSuccess: async () => {
+        const emailInput = form.querySelector('input[name="email"]');
+        const phoneInput = form.querySelector('input[name="phone"]');
+        const email = emailInput?.value?.trim();
+        const phone = phoneInput?.value?.trim();
+
+        if (isNonEmptyString(email)) {
+          const verifyEmailInput = elements.verifyEmailForm?.querySelector('input[name="email"]');
+          const resendEmailInput = elements.resendOtpForm?.querySelector('input[name="email"]');
+          if (verifyEmailInput) verifyEmailInput.value = email;
+          if (resendEmailInput) resendEmailInput.value = email;
+        }
+
+        if (isNonEmptyString(phone)) {
+          const loginPhoneInput = elements.loginForm?.querySelector('input[name="phone"]');
+          if (loginPhoneInput) loginPhoneInput.value = phone;
+        }
+      },
     });
   });
 
@@ -1563,12 +1795,7 @@ const bindActions = () => {
       if (!isNonEmptyString(currencyId)) {
         throw new Error('Currency is required');
       }
-
-      return apiRequest({
-        service: 'organization',
-        path: `/currencies/${encodeURIComponent(currencyId)}`,
-        method: 'GET',
-      });
+      return loadMemberCurrencyStats(currencyId);
     }, {
       onSuccess: async (result) => {
         writeSnapshot(elements.currencySnapshot, result.response);
@@ -1752,6 +1979,13 @@ const bindActions = () => {
     });
   });
 
+  elements.loadMemberCurrencyBtn?.addEventListener('click', async () => {
+    await runAction('Load currency insights', async () => {
+      const currencyId = elements.memberCurrencySelect?.value || getActiveCurrencyId();
+      return loadMemberCurrencyStats(currencyId);
+    });
+  });
+
   bindFormSubmit(elements.createTransferForm, async (form) => {
     await runAction('Create transfer', async () => {
       const values = removeEmptyValues(collectForm(form));
@@ -1773,9 +2007,14 @@ const bindActions = () => {
     }, {
       onSuccess: async (result) => {
         writeSnapshot(elements.transferSnapshot, result.response);
-        await loadTransfers(elements.transferPageInput?.value || 1, elements.transferLimitInput?.value || 20, {
-          silent: true,
-        });
+        await loadTransfers(
+          elements.transferPageInput?.value || 1,
+          elements.transferLimitInput?.value || 20,
+          {
+            silent: true,
+            mode: 'sent',
+          },
+        );
       },
     });
   });
@@ -1806,11 +2045,36 @@ const bindActions = () => {
     }, {
       onSuccess: async (result) => {
         writeSnapshot(elements.transferSnapshot, result.response);
-        await loadTransfers(elements.transferPageInput?.value || 1, elements.transferLimitInput?.value || 20, {
-          silent: true,
-        });
+        await loadTransfers(
+          elements.transferPageInput?.value || 1,
+          elements.transferLimitInput?.value || 20,
+          {
+            silent: true,
+            mode: 'sent',
+          },
+        );
       },
     });
+  });
+
+  elements.loadSentTransfersBtn?.addEventListener('click', async () => {
+    await runAction('Load sent transfers', async () =>
+      loadTransfers(
+        elements.transferPageInput?.value || 1,
+        elements.transferLimitInput?.value || 20,
+        { mode: 'sent' },
+      ),
+    );
+  });
+
+  elements.loadReceivedTransfersBtn?.addEventListener('click', async () => {
+    await runAction('Load received transfers', async () =>
+      loadTransfers(
+        elements.transferPageInput?.value || 1,
+        elements.transferLimitInput?.value || 20,
+        { mode: 'received' },
+      ),
+    );
   });
 
   elements.loadTransfersBtn?.addEventListener('click', async () => {
@@ -1818,6 +2082,7 @@ const bindActions = () => {
       loadTransfers(
         elements.transferPageInput?.value || 1,
         elements.transferLimitInput?.value || 20,
+        { mode: state.transferMode },
       ),
     );
   });
@@ -1833,11 +2098,13 @@ const initialize = async () => {
   renderTenantsTable();
   renderCurrenciesTable();
   renderWalletsTable();
+  setTransferMode(state.transferMode);
   renderTransfersTable();
   renderCurrencyTransactionsTable();
   renderTransferMeta();
   renderTransactionsMeta();
   renderCurrencyMetrics();
+  renderMemberCurrencyMetrics();
   refreshContextUi();
   updateSessionUi();
   openView(getPreferredView());

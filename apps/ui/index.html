@@ -104,6 +104,26 @@
 
               <article class="card span-2">
                 <div class="panel-head">
+                  <h3>Currency Insights</h3>
+                  <button id="loadMemberCurrencyBtn" class="btn btn-secondary" type="button">Load</button>
+                </div>
+                <p class="hint">Member view for live currency stats in your tenant.</p>
+                <div class="inline-actions">
+                  <select id="memberCurrencyTenantSelect" data-tenant-select></select>
+                  <select id="memberCurrencySelect" data-currency-select></select>
+                </div>
+                <div class="metric-grid member-metrics">
+                  <div class="metric-item"><span>Name</span><strong id="memberCurrencyName">-</strong></div>
+                  <div class="metric-item"><span>Symbol</span><strong id="memberCurrencySymbol">-</strong></div>
+                  <div class="metric-item"><span>Circulating</span><strong id="memberCurrencyCirculating">0</strong></div>
+                  <div class="metric-item"><span>Total Wallets</span><strong id="memberCurrencyWallets">0</strong></div>
+                  <div class="metric-item"><span>Total Transfers</span><strong id="memberCurrencyTransfers">0</strong></div>
+                </div>
+                <pre id="memberCurrencySnapshot" class="console-mini">No currency data.</pre>
+              </article>
+
+              <article class="card span-2">
+                <div class="panel-head">
                   <h3>Wallet List</h3>
                 </div>
                 <div class="table-wrap">
@@ -175,11 +195,14 @@
                 <div class="panel-head">
                   <h3>Transfer History</h3>
                   <div class="inline-actions">
+                    <button id="loadSentTransfersBtn" class="btn btn-secondary" type="button">Sent</button>
+                    <button id="loadReceivedTransfersBtn" class="btn btn-ghost" type="button">Received</button>
                     <input id="transferPageInput" type="number" min="1" value="1" />
                     <input id="transferLimitInput" type="number" min="1" max="100" value="20" />
-                    <button id="loadTransfersBtn" class="btn btn-secondary" type="button">Load Transfers</button>
+                    <button id="loadTransfersBtn" class="btn btn-secondary" type="button">Load</button>
                   </div>
                 </div>
+                <p id="transferModeHint" class="hint">Viewing sent transfers.</p>
                 <p id="transfersMeta" class="hint">No data.</p>
                 <div class="table-wrap">
                   <table>
@@ -189,7 +212,7 @@
                         <th>Status</th>
                         <th>Amount</th>
                         <th>Type</th>
-                        <th>Receiver</th>
+                        <th>Counterparty</th>
                         <th>Created</th>
                         <th></th>
                       </tr>
@@ -224,7 +247,8 @@
               <article class="card">
                 <h3>Register User</h3>
                 <form id="registerUserForm">
-                  <label><span>Tenant</span><select name="tenantId" data-tenant-select required></select></label>
+                  <label><span>Tenant</span><select name="tenantId" data-tenant-select></select></label>
+                  <label><span>Tenant ID (optional override)</span><input name="tenantIdManual" placeholder="Paste tenant UUID if needed" /></label>
                   <label><span>Phone</span><input name="phone" required placeholder="+96171111111" /></label>
                   <label><span>Email</span><input name="email" type="email" required placeholder="user@acme.com" /></label>
                   <label><span>Password</span><input name="password" type="password" required placeholder="UserPass@123" /></label>

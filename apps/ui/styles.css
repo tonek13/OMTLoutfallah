@@ -425,6 +425,12 @@ textarea:focus {
   background: #ffffff;
 }
 
+.row-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -453,6 +459,10 @@ th {
   display: grid;
   grid-template-columns: repeat(4, minmax(120px, 1fr));
   gap: 8px;
+}
+
+.metric-grid.member-metrics {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
 }
 
 .metric-item {
