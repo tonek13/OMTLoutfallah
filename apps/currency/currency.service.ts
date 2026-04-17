@@ -59,25 +59,50 @@ export class CurrencyService {
 
   // CURRENCIES
 
-  async createCurrency(tenantId: string, dto: CreateOrganizationCurrencyDto): Promise<Currency> {
-    const symbolExists = await this.currencyRepo.findOne({
-      where: { tenantId, symbol: dto.symbol.toUpperCase() },
-    });
-    if (symbolExists) throw new ConflictException(`Symbol "${dto.symbol}" already exists in this tenant`);
+  async createCurrency(
+    tenantId: string,
+    adminUserId: string,
+    dto: CreateOrganizationCurrencyDto,
+  ): Promise<Currency> {
+    return this.dataSource.transaction(async (manager) => {
+      const tenant = await manager.findOne(Tenant, { where: { id: tenantId } });
+      if (!tenant) throw new NotFoundException('Tenant not found');
 
-    const currency = this.currencyRepo.create({
-      tenantId,
-      name: dto.name,
-      symbol: dto.symbol.toUpperCase(),
-      totalSupply: dto.initialSupply,
-      circulatingSupply: dto.initialSupply,
-      color: dto.color,
-      expiryDays: dto.expiryDays,
-      earnRules: dto.earnRules ?? {},
-      status: CurrencyStatus.ACTIVE,
-    });
+      const normalizedSymbol = dto.symbol.trim().toUpperCase();
+      const symbolExists = await manager
+        .createQueryBuilder(Currency, 'currency')
+        .where('currency.tenantId = :tenantId', { tenantId })
+        .andWhere('UPPER(currency.symbol) = :symbol', { symbol: normalizedSymbol })
+        .getCount();
+      if (symbolExists > 0) {
+        throw new ConflictException(`Symbol "${dto.symbol}" already exists in this tenant`);
+      }
 
-    return this.currencyRepo.save(currency);
+      const currency = manager.create(Currency, {
+        tenantId,
+        name: dto.name,
+        symbol: normalizedSymbol,
+        totalSupply: dto.initialSupply,
+        circulatingSupply: dto.initialSupply,
+        color: dto.color,
+        expiryDays: dto.expiryDays,
+        earnRules: dto.earnRules ?? {},
+        status: CurrencyStatus.ACTIVE,
+      });
+
+      const savedCurrency = await manager.save(Currency, currency);
+
+      const adminWallet = manager.create(Wallet, {
+        userId: adminUserId,
+        tenantId,
+        currencyId: savedCurrency.id,
+        balance: dto.initialSupply,
+        frozenBalance: 0,
+      });
+      await manager.save(Wallet, adminWallet);
+
+      return savedCurrency;
+    });
   }
 
   async getCurrency(currencyId: string, tenantId: string): Promise<Currency> {

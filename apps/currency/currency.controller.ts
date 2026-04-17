@@ -96,8 +96,30 @@ export class CurrencyController {
   @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
   @ApiForbiddenResponse({ description: 'Tenant admin access denied' })
   @ApiConflictResponse({ description: 'Currency symbol already exists in this tenant' })
-  createCurrency(@Param('tenantId') tenantId: string, @Body() dto: CreateOrganizationCurrencyDto) {
-    return this.currencyService.createCurrency(tenantId, dto);
+  createCurrency(
+    @Param('tenantId') tenantId: string,
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: CreateOrganizationCurrencyDto,
+  ) {
+    return this.currencyService.createCurrency(tenantId, req.user.id, dto);
+  }
+
+  @Post('currencies')
+  @UseGuards(TenantAdminGuard)
+  @ApiOperation({ summary: 'Create a currency for the current tenant' })
+  @ApiBody({ type: CreateOrganizationCurrencyDto })
+  @ApiCreatedResponse({
+    description: 'Currency created successfully',
+    type: CurrencyResponseDto,
+  })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
+  @ApiForbiddenResponse({ description: 'Tenant admin access denied' })
+  @ApiConflictResponse({ description: 'Currency symbol already exists in this tenant' })
+  createCurrencyForCurrentTenant(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: CreateOrganizationCurrencyDto,
+  ) {
+    return this.currencyService.createCurrency(req.user.tenantId, req.user.id, dto);
   }
 
   @Get('tenants/:tenantId/currencies')
