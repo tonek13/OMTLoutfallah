@@ -45,7 +45,7 @@ export class Currency {
   earnRules!: Record<string, unknown>;
 
   @Column({ nullable: true })
-  expiryDays!: number;
+  expiryDays!: number | null;
 
   @Column({
     type: 'enum',

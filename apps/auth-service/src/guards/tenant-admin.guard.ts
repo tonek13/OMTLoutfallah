@@ -15,9 +15,10 @@ export class TenantAdminGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const user = request.user;
     const tenantParam = request.params?.tenantId ?? request.params?.id;
+    const tenantContext = tenantParam ?? user?.tenantId;
 
     const hasTenantAdminRole = user?.role === UserRole.TENANT_ADMIN;
-    const isSameTenant = Boolean(user?.tenantId) && user?.tenantId === tenantParam;
+    const isSameTenant = Boolean(user?.tenantId) && user?.tenantId === tenantContext;
 
     if (!hasTenantAdminRole || !isSameTenant) {
       throw new ForbiddenException('Tenant admin access denied');

@@ -49,4 +49,14 @@ describe('TenantAdminGuard', () => {
 
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
   });
+
+  it('allows tenant admin when route has no tenant param and tenant comes from token', () => {
+    const guard = new TenantAdminGuard();
+    const context = createContext(
+      { role: 'tenant_admin', tenantId: 'tenant-1' },
+      {},
+    );
+
+    expect(guard.canActivate(context)).toBe(true);
+  });
 });

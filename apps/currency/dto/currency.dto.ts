@@ -1,9 +1,9 @@
 import {
   IsString, IsOptional, IsNumber, IsHexColor,
-  IsPositive, MinLength, MaxLength, Min, IsInt,
+  IsPositive, MinLength, MaxLength, Min, IsInt, ValidateIf, IsEnum, Max,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { CurrencyStatus } from '../entities/currency.entity';
 import { TenantPlan, TenantStatus } from '../../auth-service/src/modules/tenants/tenant.entity';
 
@@ -121,6 +121,186 @@ export class MintTokensDto {
   reason?: string;
 }
 
+export class MintCurrencyToRecipientDto {
+  @ApiProperty({ example: 'uuid-of-recipient-user' })
+  @IsString()
+  recipientId!: string;
+
+  @ApiProperty({ example: 500 })
+  @IsNumber()
+  @IsPositive()
+  @Type(() => Number)
+  amount!: number;
+
+  @ApiPropertyOptional({ example: 'Reward for top attendance' })
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+
+export class BurnCurrencyDto {
+  @ApiProperty({ example: 250 })
+  @IsNumber()
+  @IsPositive()
+  @Type(() => Number)
+  amount!: number;
+
+  @ApiPropertyOptional({ example: 'Expired rewards cleanup' })
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+
+export class UpdateCurrencyDto {
+  @ApiPropertyOptional({ example: 'Campus Coin Plus' })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  name?: string;
+
+  @ApiPropertyOptional({ example: '#4caf50' })
+  @IsOptional()
+  @IsHexColor()
+  color?: string;
+
+  @ApiPropertyOptional({ description: 'JSON earn rules definition' })
+  @IsOptional()
+  earnRules?: Record<string, unknown>;
+
+  @ApiPropertyOptional({ example: 30, description: 'Days before earned tokens expire. Null = never.' })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === null || value === undefined || value === '') {
+      return value;
+    }
+    return Number(value);
+  })
+  @ValidateIf((_obj, value) => value !== null && value !== undefined)
+  @IsInt()
+  @Min(1)
+  expiryDays?: number | null;
+
+  @ApiPropertyOptional({
+    example: 'ACC',
+    description: 'Can only be changed before the first wallet exists for this currency',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(10)
+  symbol?: string;
+}
+
+export enum CurrencyTransactionType {
+  MINT = 'mint',
+  BURN = 'burn',
+  TRANSFER = 'transfer',
+}
+
+export class CurrencyTransactionsQueryDto {
+  @ApiPropertyOptional({
+    enum: CurrencyTransactionType,
+    description: 'Filter by transaction type',
+  })
+  @IsOptional()
+  @IsEnum(CurrencyTransactionType)
+  type?: CurrencyTransactionType;
+
+  @ApiPropertyOptional({ example: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ example: 20, minimum: 1, maximum: 100 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+}
+
+export class CurrencyTransactionActorDto {
+  @ApiProperty({ example: 'e6b02018-c8ca-4f79-9842-d8efed1c4891' })
+  id!: string;
+
+  @ApiPropertyOptional({ example: '+9613123456' })
+  phone?: string | null;
+
+  @ApiPropertyOptional({ example: 'admin@acme.com' })
+  email?: string | null;
+}
+
+export class CurrencyTransactionResponseDto {
+  @ApiProperty({ example: 'fb6ba9bd-d2f7-42a3-a623-9302c9c317ff' })
+  id!: string;
+
+  @ApiProperty({ enum: CurrencyTransactionType, example: CurrencyTransactionType.MINT })
+  type!: CurrencyTransactionType;
+
+  @ApiProperty({ type: CurrencyTransactionActorDto })
+  actor!: CurrencyTransactionActorDto;
+
+  @ApiProperty({ example: 125.5 })
+  amount!: number;
+
+  @ApiPropertyOptional({ example: 'Monthly reward distribution' })
+  reason?: string | null;
+
+  @ApiProperty({ example: '2026-03-27T12:00:00.000Z' })
+  timestamp!: Date;
+}
+
+export class CurrencyTransactionsMetaDto {
+  @ApiProperty({ example: 42 })
+  total!: number;
+
+  @ApiProperty({ example: 1 })
+  page!: number;
+
+  @ApiProperty({ example: 20 })
+  limit!: number;
+
+  @ApiProperty({ example: 3 })
+  pages!: number;
+}
+
+export class CurrencyTransactionsResponseDto {
+  @ApiProperty({ type: CurrencyTransactionResponseDto, isArray: true })
+  data!: CurrencyTransactionResponseDto[];
+
+  @ApiProperty({ type: CurrencyTransactionsMetaDto })
+  meta!: CurrencyTransactionsMetaDto;
+}
+
+export class CurrencyDailyVolumePointDto {
+  @ApiProperty({ example: '2026-04-17' })
+  date!: string;
+
+  @ApiProperty({ example: 1520.75 })
+  volume!: number;
+}
+
+export class CurrencyPanelStatsResponseDto {
+  @ApiProperty({ example: 12000 })
+  totalMinted!: number;
+
+  @ApiProperty({ example: 1500 })
+  totalBurned!: number;
+
+  @ApiProperty({ example: 842 })
+  totalTransfers!: number;
+
+  @ApiProperty({ example: 214 })
+  activeWallets!: number;
+
+  @ApiProperty({ type: CurrencyDailyVolumePointDto, isArray: true })
+  dailyVolume!: CurrencyDailyVolumePointDto[];
+}
+
 export class TenantResponseDto {
   @ApiProperty({ example: '8e80e385-0cfa-4f90-b4ca-74f52ad648e2' })
   id!: string;
@@ -192,6 +372,23 @@ export class CurrencyResponseDto {
 
   @ApiProperty({ example: '2026-03-27T12:00:00.000Z' })
   updatedAt!: Date;
+}
+
+export class CurrencyStatsResponseDto {
+  @ApiProperty({ example: 'Campus Coin' })
+  name!: string;
+
+  @ApiProperty({ example: 'ACC' })
+  symbol!: string;
+
+  @ApiProperty({ example: 875000 })
+  circulatingSupply!: number;
+
+  @ApiProperty({ example: 214 })
+  totalWallets!: number;
+
+  @ApiProperty({ example: 5096 })
+  totalTransfers!: number;
 }
 
 export class WalletCurrencySummaryDto {

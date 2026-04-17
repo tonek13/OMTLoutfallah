@@ -4,6 +4,7 @@ import { User } from '../../auth-service/src/modules/users/user.entity';
 import { Tenant } from '../../auth-service/src/modules/tenants/tenant.entity';
 import { Currency } from '../../currency/entities/currency.entity';
 import { Wallet } from '../../currency/entities/wallet.entity';
+import { AuditLog } from '../../currency/entities/audit-log.entity';
 import { Transfer } from '../../transfer-service/src/entities/transfer.entity';
 
 const parseBoolean = (value: string | undefined, defaultValue = false): boolean => {
@@ -26,7 +27,7 @@ const AppDataSource = new DataSource({
   username: getRequiredEnv('DB_USER'),
   password: process.env.DB_PASSWORD ?? getRequiredEnv('DB_PASS'),
   database: getRequiredEnv('DB_NAME'),
-  entities: [User, Transfer, Tenant, Currency, Wallet],
+  entities: [User, Transfer, Tenant, Currency, Wallet, AuditLog],
   migrations: [__dirname + '/[0-9]*-*.ts', __dirname + '/[0-9]*-*.js'],
   migrationsTableName: 'typeorm_migrations',
   synchronize: false,
