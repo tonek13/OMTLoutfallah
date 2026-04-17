@@ -1,6 +1,6 @@
 import {
   IsString, IsOptional, IsNumber, IsHexColor,
-  IsPositive, MinLength, MaxLength, Min, IsInt, ValidateIf,
+  IsPositive, MinLength, MaxLength, Min, IsInt, ValidateIf, IsEnum, Max,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
@@ -190,6 +190,90 @@ export class UpdateCurrencyDto {
   @MinLength(2)
   @MaxLength(10)
   symbol?: string;
+}
+
+export enum CurrencyTransactionType {
+  MINT = 'mint',
+  BURN = 'burn',
+  TRANSFER = 'transfer',
+}
+
+export class CurrencyTransactionsQueryDto {
+  @ApiPropertyOptional({
+    enum: CurrencyTransactionType,
+    description: 'Filter by transaction type',
+  })
+  @IsOptional()
+  @IsEnum(CurrencyTransactionType)
+  type?: CurrencyTransactionType;
+
+  @ApiPropertyOptional({ example: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ example: 20, minimum: 1, maximum: 100 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+}
+
+export class CurrencyTransactionActorDto {
+  @ApiProperty({ example: 'e6b02018-c8ca-4f79-9842-d8efed1c4891' })
+  id!: string;
+
+  @ApiPropertyOptional({ example: '+9613123456' })
+  phone?: string | null;
+
+  @ApiPropertyOptional({ example: 'admin@acme.com' })
+  email?: string | null;
+}
+
+export class CurrencyTransactionResponseDto {
+  @ApiProperty({ example: 'fb6ba9bd-d2f7-42a3-a623-9302c9c317ff' })
+  id!: string;
+
+  @ApiProperty({ enum: CurrencyTransactionType, example: CurrencyTransactionType.MINT })
+  type!: CurrencyTransactionType;
+
+  @ApiProperty({ type: CurrencyTransactionActorDto })
+  actor!: CurrencyTransactionActorDto;
+
+  @ApiProperty({ example: 125.5 })
+  amount!: number;
+
+  @ApiPropertyOptional({ example: 'Monthly reward distribution' })
+  reason?: string | null;
+
+  @ApiProperty({ example: '2026-03-27T12:00:00.000Z' })
+  timestamp!: Date;
+}
+
+export class CurrencyTransactionsMetaDto {
+  @ApiProperty({ example: 42 })
+  total!: number;
+
+  @ApiProperty({ example: 1 })
+  page!: number;
+
+  @ApiProperty({ example: 20 })
+  limit!: number;
+
+  @ApiProperty({ example: 3 })
+  pages!: number;
+}
+
+export class CurrencyTransactionsResponseDto {
+  @ApiProperty({ type: CurrencyTransactionResponseDto, isArray: true })
+  data!: CurrencyTransactionResponseDto[];
+
+  @ApiProperty({ type: CurrencyTransactionsMetaDto })
+  meta!: CurrencyTransactionsMetaDto;
 }
 
 export class TenantResponseDto {

@@ -1,6 +1,6 @@
 import {
   Controller, Post, Get, Patch, Body, Param,
-  UseGuards, Request, HttpCode, HttpStatus, BadRequestException, ForbiddenException,
+  UseGuards, Request, HttpCode, HttpStatus, BadRequestException, ForbiddenException, Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -31,6 +31,8 @@ import {
   MintCurrencyToRecipientDto,
   BurnCurrencyDto,
   UpdateCurrencyDto,
+  CurrencyTransactionsQueryDto,
+  CurrencyTransactionsResponseDto,
   TenantResponseDto,
   CurrencyResponseDto,
   CurrencyStatsResponseDto,
@@ -171,6 +173,29 @@ export class CurrencyController {
       req.user.id,
       req.user.tenantId,
       dto,
+    );
+  }
+
+  @Get('currencies/:id/transactions')
+  @ApiOperation({ summary: 'Get mint/burn/transfer transactions for a currency (tenant admin only)' })
+  @ApiParam({ name: 'id', description: 'Currency ID', format: 'uuid' })
+  @ApiOkResponse({ type: CurrencyTransactionsResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
+  @ApiForbiddenResponse({ description: 'Tenant admin access denied' })
+  @ApiNotFoundResponse({ description: 'Currency not found' })
+  getCurrencyTransactions(
+    @Param('id') currencyId: string,
+    @Request() req: AuthenticatedRequest,
+    @Query() query: CurrencyTransactionsQueryDto,
+  ) {
+    if (req.user.role !== UserRole.TENANT_ADMIN) {
+      throw new ForbiddenException('Tenant admin access denied');
+    }
+
+    return this.currencyService.getCurrencyTransactions(
+      currencyId,
+      req.user.tenantId,
+      query,
     );
   }
 

@@ -15,6 +15,8 @@ import {
   MintTokensDto,
   MintCurrencyToRecipientDto,
   BurnCurrencyDto,
+  CurrencyTransactionsQueryDto,
+  CurrencyTransactionType,
 } from './dto/currency.dto';
 
 @Injectable()
@@ -219,6 +221,65 @@ export class CurrencyService {
       circulatingSupply: Number(currency.circulatingSupply),
       totalWallets,
       totalTransfers,
+    };
+  }
+
+  async getCurrencyTransactions(
+    currencyId: string,
+    requesterTenantId: string,
+    query: CurrencyTransactionsQueryDto,
+  ): Promise<{
+    data: Array<{
+      id: string;
+      type: CurrencyTransactionType;
+      actor: { id: string; phone?: string | null; email?: string | null };
+      amount: number;
+      reason: string | null;
+      timestamp: Date;
+    }>;
+    meta: { total: number; page: number; limit: number; pages: number };
+  }> {
+    const currency = await this.currencyRepo.findOne({ where: { id: currencyId } });
+    if (!currency) throw new NotFoundException('Currency not found');
+    if (currency.tenantId !== requesterTenantId) {
+      throw new ForbiddenException('Tenant admin access denied');
+    }
+
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const type = query.type;
+
+    const includeMint = !type || type === CurrencyTransactionType.MINT;
+    const includeBurn = !type || type === CurrencyTransactionType.BURN;
+    const includeTransfer = !type || type === CurrencyTransactionType.TRANSFER;
+
+    const [mintTx, burnTx, transferTx] = await Promise.all([
+      includeMint
+        ? this.fetchAuditTransactions(requesterTenantId, currencyId, 'currency.minted', CurrencyTransactionType.MINT)
+        : Promise.resolve([]),
+      includeBurn
+        ? this.fetchAuditTransactions(requesterTenantId, currencyId, 'currency.burned', CurrencyTransactionType.BURN)
+        : Promise.resolve([]),
+      includeTransfer
+        ? this.fetchTransferTransactions(requesterTenantId, currency.symbol)
+        : Promise.resolve([]),
+    ]);
+
+    const transactions = [...mintTx, ...burnTx, ...transferTx]
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+    const total = transactions.length;
+    const startIndex = (page - 1) * limit;
+    const data = transactions.slice(startIndex, startIndex + limit);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -429,6 +490,111 @@ export class CurrencyService {
     }
   }
 
+  private async fetchAuditTransactions(
+    tenantId: string,
+    currencyId: string,
+    eventType: 'currency.minted' | 'currency.burned',
+    type: CurrencyTransactionType.MINT | CurrencyTransactionType.BURN,
+  ): Promise<Array<{
+    id: string;
+    type: CurrencyTransactionType;
+    actor: { id: string; phone?: string | null; email?: string | null };
+    amount: number;
+    reason: string | null;
+    timestamp: Date;
+  }>> {
+    try {
+      const rows = await this.dataSource.query(
+        `
+          SELECT
+            a.id::text AS id,
+            a."actorUserId" AS "actorId",
+            u.phone AS "actorPhone",
+            u.email AS "actorEmail",
+            COALESCE((a.payload ->> 'amount')::numeric, 0) AS amount,
+            NULLIF(a.payload ->> 'reason', '') AS reason,
+            a."createdAt" AS "timestamp"
+          FROM audit_logs a
+          LEFT JOIN users u ON u.id = a."actorUserId"
+          WHERE a."tenantId" = $1
+            AND a."eventType" = $2
+            AND a.payload ->> 'currencyId' = $3
+        `,
+        [tenantId, eventType, currencyId],
+      );
+
+      return rows.map((row: any) => ({
+        id: String(row.id),
+        type,
+        actor: {
+          id: String(row.actorId),
+          phone: row.actorPhone ?? null,
+          email: row.actorEmail ?? null,
+        },
+        amount: Number(row.amount),
+        reason: row.reason ?? null,
+        timestamp: new Date(row.timestamp),
+      }));
+    } catch (error: unknown) {
+      if (this.isMissingRelation(error, 'audit_logs') || this.isMissingRelation(error, 'users')) {
+        return [];
+      }
+
+      throw error;
+    }
+  }
+
+  private async fetchTransferTransactions(
+    tenantId: string,
+    symbol: string,
+  ): Promise<Array<{
+    id: string;
+    type: CurrencyTransactionType;
+    actor: { id: string; phone?: string | null; email?: string | null };
+    amount: number;
+    reason: string | null;
+    timestamp: Date;
+  }>> {
+    try {
+      const rows = await this.dataSource.query(
+        `
+          SELECT
+            t.id::text AS id,
+            t."senderId" AS "actorId",
+            u.phone AS "actorPhone",
+            u.email AS "actorEmail",
+            t.amount AS amount,
+            t.note AS reason,
+            t."createdAt" AS "timestamp"
+          FROM transfers t
+          LEFT JOIN users u ON u.id = t."senderId"
+          WHERE t."tenantId" = $1
+            AND t.currency::text = $2
+        `,
+        [tenantId, symbol],
+      );
+
+      return rows.map((row: any) => ({
+        id: String(row.id),
+        type: CurrencyTransactionType.TRANSFER,
+        actor: {
+          id: String(row.actorId),
+          phone: row.actorPhone ?? null,
+          email: row.actorEmail ?? null,
+        },
+        amount: Number(row.amount),
+        reason: row.reason ?? null,
+        timestamp: new Date(row.timestamp),
+      }));
+    } catch (error: unknown) {
+      if (this.isMissingRelation(error, 'transfers') || this.isMissingRelation(error, 'users')) {
+        return [];
+      }
+
+      throw error;
+    }
+  }
+
   private validateEarnRulesSchema(earnRules: unknown): void {
     if (!this.isPlainObject(earnRules)) {
       throw new BadRequestException('earnRules must be a JSON object');
@@ -500,5 +666,11 @@ export class CurrencyService {
 
   private isNonNegativeNumber(value: unknown): boolean {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+  }
+
+  private isMissingRelation(error: unknown, relationName: string): boolean {
+    const message = error instanceof Error ? error.message : '';
+    return message.includes(`relation "${relationName}" does not exist`)
+      || message.includes(`relation '${relationName}' does not exist`);
   }
 }

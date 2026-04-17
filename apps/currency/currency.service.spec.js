@@ -447,4 +447,131 @@ describe('CurrencyService tenant isolation', () => {
       }),
     ).rejects.toThrow(BadRequestException);
   });
+
+  it('returns paginated mint/burn/transfer transaction log', async () => {
+    const currencyRepo = {
+      findOne: jest.fn(async () => ({
+        id: 'currency-1',
+        tenantId: 'tenant-a',
+        symbol: 'USD',
+      })),
+    };
+
+    const dataSource = {
+      transaction: jest.fn(async (work) => work({})),
+      query: jest.fn(async (sql, params) => {
+        if (sql.includes('FROM audit_logs') && params[1] === 'currency.minted') {
+          return [{
+            id: 'mint-1',
+            actorId: 'admin-1',
+            actorPhone: '+96170000001',
+            actorEmail: 'admin@example.com',
+            amount: '10',
+            reason: 'Daily reward',
+            timestamp: '2026-04-01T09:00:00.000Z',
+          }];
+        }
+        if (sql.includes('FROM audit_logs') && params[1] === 'currency.burned') {
+          return [{
+            id: 'burn-1',
+            actorId: 'admin-1',
+            actorPhone: '+96170000001',
+            actorEmail: 'admin@example.com',
+            amount: '4',
+            reason: 'Correction',
+            timestamp: '2026-04-01T11:00:00.000Z',
+          }];
+        }
+        if (sql.includes('FROM transfers')) {
+          return [{
+            id: 'transfer-1',
+            actorId: 'user-1',
+            actorPhone: '+96170000002',
+            actorEmail: 'user@example.com',
+            amount: '7',
+            reason: 'Lunch',
+            timestamp: '2026-04-01T10:00:00.000Z',
+          }];
+        }
+        return [];
+      }),
+    };
+
+    const service = new CurrencyService({}, currencyRepo, {}, dataSource);
+    const result = await service.getCurrencyTransactions('currency-1', 'tenant-a', {
+      page: 1,
+      limit: 2,
+    });
+
+    expect(result.meta).toEqual({
+      total: 3,
+      page: 1,
+      limit: 2,
+      pages: 2,
+    });
+    expect(result.data).toHaveLength(2);
+    expect(result.data[0].type).toBe('burn');
+    expect(result.data[1].type).toBe('transfer');
+  });
+
+  it('filters currency transactions by type', async () => {
+    const currencyRepo = {
+      findOne: jest.fn(async () => ({
+        id: 'currency-1',
+        tenantId: 'tenant-a',
+        symbol: 'USD',
+      })),
+    };
+
+    const dataSource = {
+      transaction: jest.fn(async (work) => work({})),
+      query: jest.fn(async (sql, params) => {
+        if (sql.includes('FROM audit_logs') && params[1] === 'currency.minted') {
+          return [{
+            id: 'mint-1',
+            actorId: 'admin-1',
+            actorPhone: '+96170000001',
+            actorEmail: 'admin@example.com',
+            amount: '10',
+            reason: 'Daily reward',
+            timestamp: '2026-04-01T09:00:00.000Z',
+          }];
+        }
+        if (sql.includes('FROM audit_logs') && params[1] === 'currency.burned') {
+          return [{
+            id: 'burn-1',
+            actorId: 'admin-1',
+            actorPhone: '+96170000001',
+            actorEmail: 'admin@example.com',
+            amount: '4',
+            reason: 'Correction',
+            timestamp: '2026-04-01T11:00:00.000Z',
+          }];
+        }
+        if (sql.includes('FROM transfers')) {
+          return [{
+            id: 'transfer-1',
+            actorId: 'user-1',
+            actorPhone: '+96170000002',
+            actorEmail: 'user@example.com',
+            amount: '7',
+            reason: 'Lunch',
+            timestamp: '2026-04-01T10:00:00.000Z',
+          }];
+        }
+        return [];
+      }),
+    };
+
+    const service = new CurrencyService({}, currencyRepo, {}, dataSource);
+    const result = await service.getCurrencyTransactions('currency-1', 'tenant-a', {
+      type: 'mint',
+      page: 1,
+      limit: 20,
+    });
+
+    expect(result.meta.total).toBe(1);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].type).toBe('mint');
+  });
 });
