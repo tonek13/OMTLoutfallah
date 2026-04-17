@@ -3,317 +3,488 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OMT App Console</title>
+    <title>OMT Wallet App</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="orb orb-a"></div>
-    <div class="orb orb-b"></div>
-    <div class="noise"></div>
+    <div class="bg-orb bg-orb-a"></div>
+    <div class="bg-orb bg-orb-b"></div>
+    <div class="grain"></div>
 
-    <main class="shell">
-      <header class="hero reveal">
-        <p class="kicker">OMT v2</p>
-        <h1>Application Console</h1>
-        <p class="subtitle">Full API QA UI for auth, tenants, currencies, wallets, and transfers.</p>
-        <div class="token-badge" id="tokenStatus">Session: no token</div>
-      </header>
-
-      <section class="panel settings reveal delay-1">
-        <h2>API Targets</h2>
-        <div class="settings-grid">
-          <label>
-            <span>Auth Base URL</span>
-            <input id="authBaseUrl" type="url" placeholder="https://omt-auth-service.onrender.com" />
-          </label>
-          <label>
-            <span>Organization Base URL</span>
-            <input id="organizationBaseUrl" type="url" placeholder="https://omt-auth-service.onrender.com" />
-          </label>
-          <label>
-            <span>Transfer Base URL</span>
-            <input id="transferBaseUrl" type="url" placeholder="https://omt-transfer-service.onrender.com/api/v1" />
-          </label>
+    <div class="app-shell">
+      <aside class="left-rail">
+        <div class="brand-block">
+          <p class="eyebrow">OMT v2</p>
+          <h1>Wallet App</h1>
+          <p>Member and admin experience in one app.</p>
         </div>
-        <div class="button-row">
-          <button id="saveSettings" class="btn btn-primary" type="button">Save Targets</button>
-          <button id="clearSession" class="btn btn-secondary" type="button">Clear Session</button>
-        </div>
-      </section>
 
-      <section class="panel reveal delay-1">
-        <h2>Endpoint Coverage</h2>
-        <div class="endpoint-grid">
-          <article class="card">
-            <h3>Auth Service</h3>
-            <ul class="endpoint-list">
-              <li><code>POST /tenants</code> Create tenant + initial admin</li>
-              <li><code>POST /auth/register</code> Register normal user</li>
-              <li><code>POST /auth/verify-email</code> Verify email OTP</li>
-              <li><code>POST /auth/resend-otp</code> Resend OTP</li>
-              <li><code>POST /auth/login</code> Login</li>
-              <li><code>POST /auth/refresh</code> Refresh token</li>
-              <li><code>POST /auth/logout</code> Logout</li>
-            </ul>
-          </article>
-          <article class="card">
-            <h3>Organization & Currency</h3>
-            <ul class="endpoint-list">
-              <li><code>GET /tenants/my</code> List my tenant organizations</li>
-              <li><code>GET /tenants/:id</code> Get tenant settings</li>
-              <li><code>PATCH /tenants/:id</code> Update tenant settings</li>
-              <li><code>POST /tenants/:tenantId/currencies</code> Create currency</li>
-              <li><code>GET /tenants/:tenantId/currencies</code> List currencies</li>
-              <li><code>GET /tenants/:tenantId/currencies/:currencyId</code> Get currency</li>
-              <li><code>POST /tenants/:tenantId/currencies/:currencyId/members</code> Add wallet</li>
-              <li><code>GET /wallets/me</code> My wallets</li>
-              <li><code>POST /tenants/:tenantId/mint</code> Mint tokens</li>
-            </ul>
-          </article>
-          <article class="card">
-            <h3>Transfer Service</h3>
-            <ul class="endpoint-list">
-              <li><code>POST /transfers</code> Create transfer</li>
-              <li><code>GET /transfers</code> List my transfers</li>
-              <li><code>GET /transfers/:reference</code> Get by reference</li>
-              <li><code>PATCH /transfers/:id/cancel</code> Cancel transfer</li>
-            </ul>
-          </article>
-        </div>
-      </section>
+        <nav id="viewNav" class="main-nav">
+          <button class="view-tab is-active" data-view-target="wallets" type="button">Wallets</button>
+          <button class="view-tab" data-view-target="transfers" type="button">Transfers</button>
+          <button class="view-tab" data-view-target="auth" type="button">Account</button>
+          <button class="view-tab requires-guest" data-view-target="onboarding" type="button">Get Started</button>
+          <button class="view-tab requires-admin" data-view-target="tenant" type="button">Organization</button>
+          <button class="view-tab requires-admin" data-view-target="currencies" type="button">Rewards Admin</button>
+          <button class="view-tab" data-view-target="console" type="button">Activity Log</button>
+        </nav>
 
-      <section class="panel reveal delay-2">
-        <h2>Session</h2>
-        <div class="card-grid">
-          <article class="card">
-            <h3>Claims</h3>
-            <p class="meta" id="sessionSummary">Not logged in.</p>
-          </article>
-          <article class="card">
-            <h3>Known IDs</h3>
-            <pre id="knownIds" class="mini-console">No IDs captured yet.</pre>
-          </article>
-          <article class="card">
-            <h3>Data Sync</h3>
-            <p class="meta" id="dbSyncStatus">Waiting for authenticated session.</p>
-            <button id="refreshDbOptions" class="btn btn-secondary" type="button">Refresh DB Options</button>
-          </article>
-        </div>
-      </section>
+        <section class="session-card">
+          <p class="session-label">Current Session</p>
+          <p id="sessionBadge" class="session-badge">No active token</p>
+          <button id="clearSessionBtn" class="btn btn-ghost" type="button">Clear Session</button>
+        </section>
+      </aside>
 
-      <section class="panel reveal delay-2">
-        <h2>Public Auth & Provisioning</h2>
-        <div class="card-grid">
-          <form id="createTenantAdminForm" class="card">
-            <h3>Create Tenant + Admin</h3>
-            <label><span>Tenant Name</span><input name="name" required placeholder="Acme Corp" /></label>
-            <label><span>Tenant Slug</span><input name="slug" required placeholder="acme-corp" /></label>
-            <label><span>Admin Email</span><input name="adminEmail" type="email" required placeholder="admin@acme.com" /></label>
-            <label><span>Admin Phone</span><input name="adminPhone" required placeholder="+96170123456" /></label>
-            <label><span>Admin Password</span><input name="adminPassword" type="password" required placeholder="AdminPass@123" /></label>
-            <button class="btn btn-primary" type="submit">POST /tenants</button>
-          </form>
+      <main class="main-area">
+        <header class="top-bar">
+          <div>
+            <h2>Daily Operations</h2>
+            <p>Manage wallets, transfers, and admin rewards from a single workspace.</p>
+          </div>
+          <div class="top-actions">
+            <button id="syncAllBtn" class="btn btn-secondary" type="button">Sync Data</button>
+            <button id="toggleSettingsBtn" class="btn btn-primary" type="button">API Settings</button>
+          </div>
+        </header>
 
-          <form id="registerForm" class="card">
-            <h3>Register Normal User</h3>
-            <label><span>Tenant</span><select name="tenantId" data-tenant-bound="true" data-autofill="tenantId" data-tenant-picker="true" required></select></label>
-            <label><span>Phone</span><input name="phone" required placeholder="+96170123456" /></label>
-            <label><span>Email</span><input name="email" type="email" required placeholder="user@acme.com" /></label>
-            <label><span>Password</span><input name="password" type="password" required placeholder="UserPass@123" /></label>
-            <button class="btn btn-primary" type="submit">POST /auth/register</button>
-          </form>
-
-          <form id="verifyEmailForm" class="card">
-            <h3>Verify Email</h3>
-            <label><span>Email</span><input name="email" type="email" required /></label>
-            <label><span>OTP</span><input name="otp" required maxlength="6" placeholder="123456" /></label>
-            <button class="btn btn-primary" type="submit">POST /auth/verify-email</button>
-          </form>
-
-          <form id="resendOtpForm" class="card">
-            <h3>Resend OTP</h3>
-            <label><span>Email</span><input name="email" type="email" required /></label>
-            <button class="btn btn-secondary" type="submit">POST /auth/resend-otp</button>
-          </form>
-        </div>
-      </section>
-
-      <section class="panel reveal delay-3">
-        <h2>Authenticated Auth</h2>
-        <div class="card-grid">
-          <form id="loginForm" class="card">
-            <h3>Login</h3>
-            <label><span>Phone</span><input name="phone" required placeholder="+96170123456" /></label>
-            <label><span>Password</span><input name="password" type="password" required /></label>
-            <button class="btn btn-primary" type="submit">POST /auth/login</button>
-          </form>
-
-          <form id="refreshForm" class="card">
-            <h3>Refresh</h3>
-            <label><span>Refresh Token</span><textarea name="refreshToken" rows="3"></textarea></label>
-            <button class="btn btn-primary" type="submit">POST /auth/refresh</button>
-          </form>
-
-          <form id="logoutForm" class="card">
-            <h3>Logout</h3>
-            <p class="meta">Uses current access token.</p>
-            <button class="btn btn-secondary" type="submit">POST /auth/logout</button>
-          </form>
-        </div>
-      </section>
-
-      <section class="panel reveal delay-3">
-        <h2>Tenant Settings</h2>
-        <div class="card-grid">
-          <form id="getTenantForm" class="card">
-            <h3>Load Settings</h3>
-            <label><span>Tenant</span><select name="tenantId" data-tenant-bound="true" data-autofill="tenantId" data-tenant-picker="true" required></select></label>
-            <button class="btn btn-primary" type="submit">GET /tenants/:id</button>
-          </form>
-
-          <form id="updateTenantForm" class="card">
-            <h3>Update Settings</h3>
-            <label><span>Tenant</span><select name="tenantId" data-tenant-bound="true" data-autofill="tenantId" data-tenant-picker="true" required></select></label>
-            <label><span>Name</span><input name="name" placeholder="Acme Corp Intl" /></label>
-            <label><span>Logo URL</span><input name="logo" placeholder="https://cdn.example.com/logo.png" /></label>
-            <label><span>Primary Color</span><input name="primaryColor" placeholder="#1f8e6a" /></label>
-            <button class="btn btn-primary" type="submit">PATCH /tenants/:id</button>
-          </form>
-
-          <article class="card">
-            <h3>Tenant Snapshot</h3>
-            <pre id="tenantSnapshot" class="mini-console">No data.</pre>
-          </article>
-        </div>
-      </section>
-
-      <section class="panel reveal delay-3">
-        <h2>Currencies</h2>
-        <div class="card-grid">
-          <form id="createCurrencyForm" class="card">
-            <h3>Create Currency</h3>
-            <label><span>Tenant</span><select name="tenantId" data-tenant-bound="true" data-autofill="tenantId" data-tenant-picker="true" required></select></label>
-            <label><span>Name</span><input name="name" required placeholder="Campus Coin" /></label>
-            <label><span>Symbol</span><input name="symbol" required placeholder="CC" /></label>
-            <label><span>Initial Supply</span><input name="initialSupply" type="number" min="1" step="0.0001" required /></label>
-            <label><span>Color</span><input name="color" placeholder="#4caf50" /></label>
-            <label><span>Expiry Days</span><input name="expiryDays" type="number" min="1" /></label>
-            <label><span>Earn Rules JSON</span><textarea name="earnRules" rows="3" placeholder='{"purchase":{"pointsPerDollar":2}}'></textarea></label>
-            <button class="btn btn-primary" type="submit">POST /tenants/:tenantId/currencies</button>
-          </form>
-
-          <form id="listCurrenciesForm" class="card">
-            <h3>List Currencies</h3>
-            <label><span>Tenant</span><select name="tenantId" data-tenant-bound="true" data-autofill="tenantId" data-tenant-picker="true" required></select></label>
-            <button class="btn btn-primary" type="submit">GET /tenants/:tenantId/currencies</button>
-          </form>
-
-          <form id="getCurrencyForm" class="card">
-            <h3>Get Currency</h3>
-            <label><span>Tenant</span><select name="tenantId" data-tenant-bound="true" data-autofill="tenantId" data-tenant-picker="true" required></select></label>
-            <label><span>Currency</span><select name="currencyId" data-autofill="currencyId" data-currency-id-picker="true" required></select></label>
-            <button class="btn btn-primary" type="submit">GET /tenants/:tenantId/currencies/:currencyId</button>
-          </form>
-
-          <article class="card">
-            <h3>Currency Snapshot</h3>
-            <pre id="currencySnapshot" class="mini-console">No data.</pre>
-          </article>
-        </div>
-      </section>
-
-      <section class="panel reveal delay-4">
-        <h2>Wallets</h2>
-        <div class="card-grid">
-          <form id="addWalletForm" class="card">
-            <h3>Add Wallet</h3>
-            <label><span>Tenant</span><select name="tenantId" data-tenant-bound="true" data-autofill="tenantId" data-tenant-picker="true" required></select></label>
-            <label><span>Currency</span><select name="currencyId" data-autofill="currencyId" data-currency-id-picker="true" required></select></label>
-            <label><span>User ID</span><input name="userId" required placeholder="uuid" /></label>
-            <button class="btn btn-primary" type="submit">POST /tenants/:tenantId/currencies/:currencyId/members</button>
-          </form>
-
-          <form id="myWalletsForm" class="card">
-            <h3>My Wallets</h3>
-            <label><span>Tenant (x-tenant-id)</span><select name="tenantId" data-tenant-bound="true" data-autofill="tenantId" data-tenant-picker="true" required></select></label>
-            <button class="btn btn-primary" type="submit">GET /wallets/me</button>
-          </form>
-
-          <form id="mintTokensForm" class="card">
-            <h3>Mint Tokens</h3>
-            <label><span>Tenant</span><select name="tenantId" data-tenant-bound="true" data-autofill="tenantId" data-tenant-picker="true" required></select></label>
-            <label><span>Wallet</span><select name="walletId" data-autofill="walletId" data-wallet-picker="true" required></select></label>
-            <label><span>Amount</span><input name="amount" type="number" min="0.0001" step="0.0001" required /></label>
-            <label><span>Reason (optional)</span><input name="reason" /></label>
-            <button class="btn btn-primary" type="submit">POST /tenants/:tenantId/mint</button>
-          </form>
-
-          <article class="card">
-            <h3>Wallet Snapshot</h3>
-            <pre id="walletSnapshot" class="mini-console">No data.</pre>
-          </article>
-        </div>
-      </section>
-
-      <section class="panel transfer-panel reveal delay-4">
-        <h2>Transfers</h2>
-        <p class="meta">Uses transfer service with current auth token.</p>
-        <div class="card-grid">
-          <form id="createTransferForm" class="card">
-            <h3>Create Transfer</h3>
-            <label><span>Receiver Phone</span><input name="receiverPhone" required placeholder="+96170123456" /></label>
-            <label><span>Receiver Name</span><input name="receiverName" required /></label>
-            <label><span>Amount</span><input name="amount" type="number" min="1" step="0.01" required /></label>
+        <section id="settingsPanel" class="settings-panel is-collapsed">
+          <div class="panel-head">
+            <h3>Service Targets</h3>
+          </div>
+          <div class="settings-grid">
             <label>
-              <span>Currency</span>
-              <select name="currency" data-currency-symbol-picker="true" required></select>
+              <span>Auth Base URL</span>
+              <input id="authBaseUrl" type="url" placeholder="http://localhost:3001" />
             </label>
             <label>
-              <span>Type</span>
-              <input name="type" list="transferTypeOptions" required placeholder="DOMESTIC" />
+              <span>Organization Base URL</span>
+              <input id="organizationBaseUrl" type="url" placeholder="http://localhost:3001" />
             </label>
-            <datalist id="transferTypeOptions"></datalist>
-            <label><span>Note (optional)</span><input name="note" /></label>
-            <button class="btn btn-primary" type="submit">POST /transfers</button>
-          </form>
+            <label>
+              <span>Transfer Base URL</span>
+              <input id="transferBaseUrl" type="url" placeholder="http://localhost:3002/api/v1" />
+            </label>
+          </div>
+          <div class="inline-actions">
+            <button id="saveSettingsBtn" class="btn btn-primary" type="button">Save</button>
+            <button id="closeSettingsBtn" class="btn btn-ghost" type="button">Close</button>
+          </div>
+        </section>
 
-          <form id="listTransfersForm" class="card">
-            <h3>List Transfers</h3>
-            <label><span>Page</span><input name="page" type="number" min="1" value="1" /></label>
-            <label><span>Limit</span><input name="limit" type="number" min="1" value="20" /></label>
-            <button class="btn btn-primary" type="submit">GET /transfers</button>
-          </form>
+        <div id="flashMessage" class="flash-message" aria-live="polite">Ready.</div>
 
-          <form id="getTransferForm" class="card">
-            <h3>Get By Reference</h3>
-            <label><span>Reference</span><input name="reference" data-autofill="transferReference" required placeholder="OMT-2026-XXXXXX" /></label>
-            <button class="btn btn-primary" type="submit">GET /transfers/:reference</button>
-          </form>
+        <section class="views">
+          <section class="view is-active" data-view="wallets">
+            <div class="grid two-col">
+              <article class="card">
+                <h3>Your Wallets</h3>
+                <p class="hint">Pick your tenant, load balances, and bind a wallet for admin actions.</p>
+                <div class="inline-actions">
+                  <select id="walletTenantSelect" data-tenant-select></select>
+                  <button id="loadWalletsBtn" class="btn btn-secondary" type="button">Load Wallets</button>
+                </div>
+              </article>
 
-          <form id="cancelTransferForm" class="card">
-            <h3>Cancel Transfer</h3>
-            <label><span>Transfer ID</span><input name="id" data-autofill="transferId" required placeholder="uuid" /></label>
-            <button class="btn btn-secondary" type="submit">PATCH /transfers/:id/cancel</button>
-          </form>
+              <article class="card">
+                <h3>Quick Actions</h3>
+                <p class="hint">Start common member actions immediately.</p>
+                <div class="quick-actions">
+                  <button class="btn btn-primary" data-go-view="transfers" type="button">Send Transfer</button>
+                  <button class="btn btn-secondary" data-go-view="auth" type="button">Login / Refresh</button>
+                  <button class="btn btn-ghost requires-admin" data-go-view="currencies" type="button">Open Admin Rewards</button>
+                </div>
+              </article>
 
-          <article class="card">
-            <h3>Transfer Snapshot</h3>
-            <pre id="transferSnapshot" class="mini-console">No data.</pre>
-          </article>
-        </div>
-      </section>
+              <article class="card span-2">
+                <div class="panel-head">
+                  <h3>Wallet List</h3>
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Currency</th>
+                        <th>Wallet ID</th>
+                        <th>Balance</th>
+                        <th>Frozen</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="walletsTableBody"></tbody>
+                  </table>
+                </div>
+              </article>
 
-      <section class="panel reveal delay-4">
-        <h2>Response Console</h2>
-        <pre id="responseBox">Ready.</pre>
-      </section>
-    </main>
+              <article class="card span-2">
+                <h3>Wallet Snapshot</h3>
+                <pre id="walletSnapshot" class="console-mini">No wallet data.</pre>
+              </article>
+            </div>
+          </section>
+
+          <section class="view" data-view="transfers">
+            <div class="grid two-col">
+              <article class="card">
+                <h3>Create Transfer</h3>
+                <form id="createTransferForm">
+                  <label><span>Receiver Phone</span><input name="receiverPhone" required placeholder="+96170123456" /></label>
+                  <label><span>Receiver Name</span><input name="receiverName" required placeholder="John Doe" /></label>
+                  <label><span>Amount</span><input name="amount" type="number" min="1" step="0.01" required /></label>
+                  <label>
+                    <span>Currency</span>
+                    <select name="currency" required>
+                      <option value="USD">USD</option>
+                      <option value="LBP">LBP</option>
+                      <option value="EUR">EUR</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Type</span>
+                    <select name="type" required>
+                      <option value="DOMESTIC">DOMESTIC</option>
+                      <option value="INTERNATIONAL">INTERNATIONAL</option>
+                      <option value="WALLET">WALLET</option>
+                    </select>
+                  </label>
+                  <label><span>Note</span><input name="note" placeholder="Optional note" /></label>
+                  <button class="btn btn-primary" type="submit">Create Transfer</button>
+                </form>
+              </article>
+
+              <article class="card">
+                <h3>Transfer Lookup</h3>
+                <form id="getTransferForm">
+                  <label><span>Reference</span><input name="reference" required placeholder="OMT-2026-XXXXXX" /></label>
+                  <button class="btn btn-secondary" type="submit">Get By Reference</button>
+                </form>
+                <form id="cancelTransferForm">
+                  <label><span>Transfer ID</span><input name="id" required placeholder="uuid" /></label>
+                  <button class="btn btn-ghost" type="submit">Cancel Transfer</button>
+                </form>
+                <pre id="transferSnapshot" class="console-mini">No transfer loaded.</pre>
+              </article>
+
+              <article class="card span-2">
+                <div class="panel-head">
+                  <h3>Transfer History</h3>
+                  <div class="inline-actions">
+                    <input id="transferPageInput" type="number" min="1" value="1" />
+                    <input id="transferLimitInput" type="number" min="1" max="100" value="20" />
+                    <button id="loadTransfersBtn" class="btn btn-secondary" type="button">Load Transfers</button>
+                  </div>
+                </div>
+                <p id="transfersMeta" class="hint">No data.</p>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Reference</th>
+                        <th>Status</th>
+                        <th>Amount</th>
+                        <th>Type</th>
+                        <th>Receiver</th>
+                        <th>Created</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="transfersTableBody"></tbody>
+                  </table>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="view" data-view="auth">
+            <div class="grid two-col">
+              <article class="card">
+                <h3>Login</h3>
+                <form id="loginForm">
+                  <label><span>Phone</span><input name="phone" required placeholder="+96170123456" /></label>
+                  <label><span>Password</span><input name="password" type="password" required /></label>
+                  <button class="btn btn-primary" type="submit">Login</button>
+                </form>
+              </article>
+
+              <article class="card">
+                <h3>Refresh Token</h3>
+                <form id="refreshTokenForm">
+                  <label><span>Refresh Token</span><textarea name="refreshToken" rows="4" placeholder="Leave empty to reuse current refresh token"></textarea></label>
+                  <button class="btn btn-secondary" type="submit">Refresh Session</button>
+                </form>
+                <button id="logoutBtn" class="btn btn-ghost" type="button">Logout</button>
+              </article>
+
+              <article class="card">
+                <h3>Register User</h3>
+                <form id="registerUserForm">
+                  <label><span>Tenant</span><select name="tenantId" data-tenant-select required></select></label>
+                  <label><span>Phone</span><input name="phone" required placeholder="+96171111111" /></label>
+                  <label><span>Email</span><input name="email" type="email" required placeholder="user@acme.com" /></label>
+                  <label><span>Password</span><input name="password" type="password" required placeholder="UserPass@123" /></label>
+                  <button class="btn btn-primary" type="submit">Register</button>
+                </form>
+              </article>
+
+              <article class="card">
+                <h3>Email Verification</h3>
+                <form id="verifyEmailForm">
+                  <label><span>Email</span><input name="email" type="email" required /></label>
+                  <label><span>OTP</span><input name="otp" maxlength="6" required placeholder="123456" /></label>
+                  <button class="btn btn-secondary" type="submit">Verify OTP</button>
+                </form>
+                <form id="resendOtpForm">
+                  <label><span>Email</span><input name="email" type="email" required /></label>
+                  <button class="btn btn-ghost" type="submit">Resend OTP</button>
+                </form>
+              </article>
+
+              <article class="card span-2">
+                <h3>Session Claims</h3>
+                <pre id="sessionClaims" class="console-mini">No active claims.</pre>
+              </article>
+            </div>
+          </section>
+
+          <section class="view requires-guest" data-view="onboarding">
+            <div class="grid one-col">
+              <article class="card max-760">
+                <h3>Create Tenant + First Admin</h3>
+                <p class="hint">Use this only once when opening a new tenant.</p>
+                <form id="createTenantForm">
+                  <label><span>Tenant Name</span><input name="name" required placeholder="Acme Corporation" /></label>
+                  <label><span>Tenant Slug</span><input name="slug" required placeholder="acme-corp" /></label>
+                  <label><span>Admin Email</span><input name="adminEmail" type="email" required placeholder="admin@acme.com" /></label>
+                  <label><span>Admin Phone</span><input name="adminPhone" required placeholder="+96170123456" /></label>
+                  <label><span>Admin Password</span><input name="adminPassword" type="password" required placeholder="AdminPass@123" /></label>
+                  <button class="btn btn-primary" type="submit">Create Tenant</button>
+                </form>
+              </article>
+            </div>
+          </section>
+
+          <section class="view requires-admin" data-view="tenant">
+            <div class="grid two-col">
+              <article class="card span-2">
+                <div class="panel-head">
+                  <h3>Tenant Directory</h3>
+                  <button id="loadTenantsBtn" class="btn btn-secondary" type="button">Load My Tenants</button>
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Slug</th>
+                        <th>ID</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="tenantsTableBody"></tbody>
+                  </table>
+                </div>
+              </article>
+
+              <article class="card">
+                <h3>Tenant Details</h3>
+                <form id="getTenantForm">
+                  <label><span>Tenant</span><select name="tenantId" data-tenant-select required></select></label>
+                  <button class="btn btn-primary" type="submit">Load Tenant</button>
+                </form>
+              </article>
+
+              <article class="card">
+                <h3>Update Tenant</h3>
+                <form id="updateTenantForm">
+                  <label><span>Tenant</span><select name="tenantId" data-tenant-select required></select></label>
+                  <label><span>Name</span><input name="name" placeholder="New tenant name" /></label>
+                  <label><span>Logo URL</span><input name="logo" placeholder="https://cdn.example.com/logo.png" /></label>
+                  <label><span>Primary Color</span><input name="primaryColor" placeholder="#0f8d7f" /></label>
+                  <button class="btn btn-secondary" type="submit">Update Tenant</button>
+                </form>
+              </article>
+
+              <article class="card span-2">
+                <h3>Tenant Snapshot</h3>
+                <pre id="tenantSnapshot" class="console-mini">No tenant loaded.</pre>
+              </article>
+            </div>
+          </section>
+
+          <section class="view requires-admin" data-view="currencies">
+            <div class="grid two-col">
+              <article class="card">
+                <h3>Create Currency</h3>
+                <form id="createCurrencyForm">
+                  <label><span>Tenant</span><select name="tenantId" data-tenant-select required></select></label>
+                  <label><span>Name</span><input name="name" required placeholder="Campus Coin" /></label>
+                  <label><span>Symbol</span><input name="symbol" required placeholder="CC" /></label>
+                  <label><span>Initial Supply</span><input name="initialSupply" type="number" min="1" step="0.0001" required /></label>
+                  <label><span>Color</span><input name="color" placeholder="#34b9a6" /></label>
+                  <label><span>Expiry Days</span><input name="expiryDays" type="number" min="1" /></label>
+                  <label><span>Earn Rules JSON</span><textarea name="earnRules" rows="4" placeholder='{"purchase":{"pointsPerDollar":2}}'></textarea></label>
+                  <label class="inline-checkbox"><input name="legacyRoute" type="checkbox" /> <span>Use legacy route (`POST /tenants/:tenantId/currencies`)</span></label>
+                  <button class="btn btn-primary" type="submit">Create Currency</button>
+                </form>
+              </article>
+
+              <article class="card">
+                <h3>Currency Actions</h3>
+                <form id="currencyActionsForm">
+                  <label><span>Tenant</span><select name="tenantId" data-tenant-select required></select></label>
+                  <label><span>Currency</span><select name="currencyId" data-currency-select required></select></label>
+                  <div class="inline-actions">
+                    <button id="loadCurrenciesBtn" class="btn btn-secondary" type="button">List</button>
+                    <button id="loadCurrencyLegacyBtn" class="btn btn-ghost" type="button">Legacy Detail</button>
+                    <button id="loadCurrencyViewBtn" class="btn btn-ghost" type="button">Live View</button>
+                  </div>
+                </form>
+                <pre id="currencySnapshot" class="console-mini">No currency loaded.</pre>
+              </article>
+
+              <article class="card span-2">
+                <h3>Currencies</h3>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Symbol</th>
+                        <th>Circulating</th>
+                        <th>Total</th>
+                        <th>ID</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="currenciesTableBody"></tbody>
+                  </table>
+                </div>
+              </article>
+
+              <article class="card">
+                <h3>Update Currency</h3>
+                <form id="updateCurrencyForm">
+                  <label><span>Currency</span><select name="currencyId" data-currency-select required></select></label>
+                  <label><span>Name</span><input name="name" placeholder="Updated name" /></label>
+                  <label><span>Color</span><input name="color" placeholder="#1aa58d" /></label>
+                  <label><span>Expiry Days</span><input name="expiryDays" placeholder="30 or null" /></label>
+                  <label><span>Earn Rules JSON</span><textarea name="earnRules" rows="4" placeholder='{"attendance":{"basePoints":10}}'></textarea></label>
+                  <label><span>Symbol (locked after first wallet)</span><input name="symbol" placeholder="NEW" /></label>
+                  <button class="btn btn-secondary" type="submit">Update Currency</button>
+                </form>
+              </article>
+
+              <article class="card">
+                <h3>Add Member Wallet</h3>
+                <form id="addMemberWalletForm">
+                  <label><span>Tenant</span><select name="tenantId" data-tenant-select required></select></label>
+                  <label><span>Currency</span><select name="currencyId" data-currency-select required></select></label>
+                  <label><span>User ID</span><input name="userId" required placeholder="uuid" /></label>
+                  <button class="btn btn-primary" type="submit">Create Wallet</button>
+                </form>
+              </article>
+
+              <article class="card">
+                <h3>Mint Tokens</h3>
+                <form id="mintCurrencyForm">
+                  <label><span>Currency</span><select name="currencyId" data-currency-select required></select></label>
+                  <label><span>Recipient User ID</span><input name="recipientId" required placeholder="uuid" /></label>
+                  <label><span>Amount</span><input name="amount" type="number" min="0.0001" step="0.0001" required /></label>
+                  <label><span>Reason</span><input name="reason" placeholder="Reward reason" /></label>
+                  <button class="btn btn-primary" type="submit">Mint</button>
+                </form>
+              </article>
+
+              <article class="card">
+                <h3>Burn Tokens</h3>
+                <form id="burnCurrencyForm">
+                  <label><span>Currency</span><select name="currencyId" data-currency-select required></select></label>
+                  <label><span>Amount</span><input name="amount" type="number" min="0.0001" step="0.0001" required /></label>
+                  <label><span>Reason</span><input name="reason" placeholder="Burn reason" /></label>
+                  <button class="btn btn-secondary" type="submit">Burn</button>
+                </form>
+              </article>
+
+              <article class="card">
+                <h3>Legacy Mint</h3>
+                <form id="legacyMintForm">
+                  <label><span>Tenant</span><select name="tenantId" data-tenant-select required></select></label>
+                  <label><span>Wallet</span><select name="walletId" data-wallet-select required></select></label>
+                  <label><span>Amount</span><input name="amount" type="number" min="0.0001" step="0.0001" required /></label>
+                  <label><span>Reason</span><input name="reason" /></label>
+                  <button class="btn btn-ghost" type="submit">Legacy Mint</button>
+                </form>
+              </article>
+
+              <article class="card span-2">
+                <div class="panel-head">
+                  <h3>Currency Stats</h3>
+                  <button id="loadCurrencyStatsBtn" class="btn btn-secondary" type="button">Load Stats</button>
+                </div>
+                <div class="metric-grid">
+                  <div class="metric-item"><span>Total Minted</span><strong id="metricTotalMinted">0</strong></div>
+                  <div class="metric-item"><span>Total Burned</span><strong id="metricTotalBurned">0</strong></div>
+                  <div class="metric-item"><span>Total Transfers</span><strong id="metricTotalTransfers">0</strong></div>
+                  <div class="metric-item"><span>Active Wallets</span><strong id="metricActiveWallets">0</strong></div>
+                </div>
+                <div id="dailyVolumeChart" class="volume-chart"></div>
+              </article>
+
+              <article class="card span-2">
+                <div class="panel-head">
+                  <h3>Currency Transactions</h3>
+                  <div class="inline-actions">
+                    <select id="transactionTypeFilter">
+                      <option value="">All</option>
+                      <option value="mint">Mint</option>
+                      <option value="burn">Burn</option>
+                      <option value="transfer">Transfer</option>
+                    </select>
+                    <input id="transactionPageInput" type="number" min="1" value="1" />
+                    <input id="transactionLimitInput" type="number" min="1" max="100" value="20" />
+                    <button id="loadCurrencyTransactionsBtn" class="btn btn-secondary" type="button">Load</button>
+                  </div>
+                </div>
+                <p id="transactionsMeta" class="hint">No data.</p>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Type</th>
+                        <th>Actor</th>
+                        <th>Amount</th>
+                        <th>Reason</th>
+                        <th>Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody id="currencyTransactionsBody"></tbody>
+                  </table>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="view" data-view="console">
+            <div class="grid one-col">
+              <article class="card">
+                <h3>Action Log</h3>
+                <pre id="responseLog" class="console-main">Ready.</pre>
+              </article>
+              <article class="card">
+                <h3>Known IDs</h3>
+                <pre id="knownIds" class="console-mini">No IDs captured yet.</pre>
+              </article>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
 
     <script src="./app.js"></script>
   </body>
