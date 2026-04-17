@@ -17,6 +17,48 @@ const parseBoolean = (value: string | undefined, defaultValue = false): boolean 
   return ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
 };
 
+const resolveDbSsl = (config: ConfigService): false | { rejectUnauthorized: boolean } => {
+  const sslMode = config.get<string>('PGSSLMODE')?.toLowerCase();
+  if (sslMode === 'disable') return false;
+  if (sslMode === 'require' || sslMode === 'verify-ca' || sslMode === 'verify-full') {
+    return {
+      rejectUnauthorized: parseBoolean(
+        config.get<string>('DB_SSL_REJECT_UNAUTHORIZED'),
+        false,
+      ),
+    };
+  }
+
+  const explicitSsl = config.get<string>('DB_SSL') ?? config.get<string>('TYPEORM_SSL');
+  if (explicitSsl !== undefined) {
+    if (parseBoolean(explicitSsl, false)) {
+      return {
+        rejectUnauthorized: parseBoolean(
+          config.get<string>('DB_SSL_REJECT_UNAUTHORIZED'),
+          false,
+        ),
+      };
+    }
+    return false;
+  }
+
+  const databaseUrl = config.get<string>('DATABASE_URL') ?? '';
+  const dbHost = config.get<string>('DB_HOST') ?? '';
+  const usesNeon = databaseUrl.includes('neon.tech') || dbHost.includes('neon.tech');
+  const isProduction = config.get<string>('NODE_ENV') === 'production';
+
+  if (usesNeon || isProduction) {
+    return {
+      rejectUnauthorized: parseBoolean(
+        config.get<string>('DB_SSL_REJECT_UNAUTHORIZED'),
+        false,
+      ),
+    };
+  }
+
+  return false;
+};
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -25,12 +67,21 @@ const parseBoolean = (value: string | undefined, defaultValue = false): boolean 
       validationSchema: Joi.object({
         NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
         PORT: Joi.number().integer().min(1).max(65535).default(3002),
-        DB_HOST: Joi.string().required(),
+        DATABASE_URL: Joi.string().optional(),
+        DB_HOST: Joi.string().optional(),
         DB_PORT: Joi.number().integer().min(1).max(65535).default(5432),
-        DB_USER: Joi.string().required(),
+        DB_USER: Joi.string().optional(),
         DB_PASSWORD: Joi.string().optional(),
         DB_PASS: Joi.string().optional(),
-        DB_NAME: Joi.string().required(),
+        DB_NAME: Joi.string().optional(),
+        DB_SSL: Joi.string().valid('true', 'false', '1', '0').optional(),
+        TYPEORM_SSL: Joi.string().valid('true', 'false', '1', '0').optional(),
+        DB_SSL_REJECT_UNAUTHORIZED: Joi.string()
+          .valid('true', 'false', '1', '0')
+          .optional(),
+        PGSSLMODE: Joi.string()
+          .valid('disable', 'require', 'verify-ca', 'verify-full')
+          .optional(),
         JWT_SECRET: Joi.string().min(32).required(),
         REDIS_HOST: Joi.string().required(),
         REDIS_PORT: Joi.number().integer().min(1).max(65535).default(6379),
@@ -43,7 +94,24 @@ const parseBoolean = (value: string | undefined, defaultValue = false): boolean 
         ENABLE_SWAGGER: Joi.string().valid('true', 'false', '1', '0').default('false'),
         TYPEORM_SYNCHRONIZE: Joi.string().valid('true', 'false', '1', '0').default('false'),
         TYPEORM_LOGGING: Joi.string().valid('true', 'false', '1', '0').default('false'),
-      }).or('DB_PASSWORD', 'DB_PASS'),
+      }).custom((value, helpers) => {
+        if (!value.DATABASE_URL) {
+          if (!value.DB_HOST || !value.DB_USER || !value.DB_NAME) {
+            return helpers.message({
+              custom:
+                'Set DATABASE_URL or set DB_HOST, DB_USER, and DB_NAME.',
+            });
+          }
+
+          if (!value.DB_PASSWORD && !value.DB_PASS) {
+            return helpers.message({
+              custom: 'Set DB_PASSWORD or DB_PASS when DATABASE_URL is not used.',
+            });
+          }
+        }
+
+        return value;
+      }),
       validationOptions: {
         allowUnknown: true,
       },
@@ -54,13 +122,20 @@ const parseBoolean = (value: string | undefined, defaultValue = false): boolean 
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
-        host: config.getOrThrow<string>('DB_HOST'),
-        port: config.get<number>('DB_PORT', 5432),
-        username: config.getOrThrow<string>('DB_USER'),
-        password:
-          config.get<string>('DB_PASSWORD') ??
-          config.getOrThrow<string>('DB_PASS'),
-        database: config.getOrThrow<string>('DB_NAME'),
+        ...(config.get<string>('DATABASE_URL')
+          ? {
+            url: config.getOrThrow<string>('DATABASE_URL'),
+          }
+          : {
+            host: config.getOrThrow<string>('DB_HOST'),
+            port: config.get<number>('DB_PORT', 5432),
+            username: config.getOrThrow<string>('DB_USER'),
+            password:
+              config.get<string>('DB_PASSWORD') ??
+              config.getOrThrow<string>('DB_PASS'),
+            database: config.getOrThrow<string>('DB_NAME'),
+          }),
+        ssl: resolveDbSsl(config),
         entities: [Transfer],
         synchronize: parseBoolean(config.get<string>('TYPEORM_SYNCHRONIZE'), false),
         logging: parseBoolean(config.get<string>('TYPEORM_LOGGING'), false),
