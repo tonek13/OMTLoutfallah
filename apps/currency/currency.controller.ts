@@ -1,6 +1,6 @@
 import {
   Controller, Post, Get, Patch, Body, Param,
-  UseGuards, Request, HttpCode, HttpStatus, BadRequestException,
+  UseGuards, Request, HttpCode, HttpStatus, BadRequestException, ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -28,6 +28,7 @@ import {
   CreateOrganizationCurrencyDto,
   AddOrganizationMemberDto,
   MintTokensDto,
+  MintCurrencyToRecipientDto,
   TenantResponseDto,
   CurrencyResponseDto,
   CurrencyStatsResponseDto,
@@ -216,5 +217,34 @@ export class CurrencyController {
   @ApiNotFoundResponse({ description: 'Membership wallet or currency not found' })
   mintTokens(@Param('tenantId') tenantId: string, @Body() dto: MintTokensDto) {
     return this.currencyService.mintTokens(tenantId, dto);
+  }
+
+  @Post('currencies/:id/mint')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Mint tokens to a tenant member's wallet (tenant admin only)" })
+  @ApiParam({ name: 'id', description: 'Currency ID', format: 'uuid' })
+  @ApiBody({ type: MintCurrencyToRecipientDto })
+  @ApiOkResponse({
+    description: 'Wallet balance updated after minting',
+    type: WalletResponseDto,
+  })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
+  @ApiForbiddenResponse({ description: 'Tenant admin access denied' })
+  @ApiNotFoundResponse({ description: 'Currency or recipient wallet not found' })
+  mintToRecipientWallet(
+    @Param('id') currencyId: string,
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: MintCurrencyToRecipientDto,
+  ) {
+    if (req.user.role !== UserRole.TENANT_ADMIN) {
+      throw new ForbiddenException('Tenant admin access denied');
+    }
+
+    return this.currencyService.mintCurrencyToRecipient(
+      currencyId,
+      req.user.id,
+      req.user.tenantId,
+      dto,
+    );
   }
 }

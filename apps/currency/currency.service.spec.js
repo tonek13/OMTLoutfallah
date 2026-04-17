@@ -123,4 +123,94 @@ describe('CurrencyService tenant isolation', () => {
 
     expect(result.totalTransfers).toBe(0);
   });
+
+  it('mints to a recipient wallet, increases circulating supply, and writes an audit log', async () => {
+    const currency = {
+      id: 'currency-1',
+      tenantId: 'tenant-a',
+      circulatingSupply: '1000',
+    };
+    const wallet = {
+      id: 'wallet-1',
+      userId: 'recipient-1',
+      tenantId: 'tenant-a',
+      currencyId: 'currency-1',
+      balance: '125',
+    };
+
+    const manager = {
+      findOne: jest.fn(async (entity, options) => {
+        if (entity?.name === 'Currency') return currency;
+        if (entity?.name === 'Wallet') {
+          return options?.where?.userId === 'recipient-1' ? wallet : null;
+        }
+        return null;
+      }),
+      save: jest.fn(async (_entity, value) => value),
+      create: jest.fn((_entity, payload) => payload),
+    };
+
+    const dataSource = {
+      transaction: jest.fn(async (work) => work(manager)),
+      query: jest.fn(async () => [{ totalTransfers: '0' }]),
+    };
+
+    const service = new CurrencyService({}, {}, {}, dataSource);
+    const result = await service.mintCurrencyToRecipient(
+      'currency-1',
+      'admin-1',
+      'tenant-a',
+      { recipientId: 'recipient-1', amount: 25, reason: 'Monthly reward' },
+    );
+
+    expect(result.balance).toBe(150);
+    expect(currency.circulatingSupply).toBe(1025);
+
+    const auditLogSaveCall = manager.save.mock.calls.find(
+      ([entity]) => entity?.name === 'AuditLog',
+    );
+
+    expect(auditLogSaveCall).toBeDefined();
+    expect(auditLogSaveCall[1]).toMatchObject({
+      tenantId: 'tenant-a',
+      actorUserId: 'admin-1',
+      eventType: 'currency.minted',
+      entityType: 'wallet',
+      entityId: 'wallet-1',
+      payload: expect.objectContaining({
+        currencyId: 'currency-1',
+        recipientId: 'recipient-1',
+        amount: 25,
+        reason: 'Monthly reward',
+      }),
+    });
+  });
+
+  it('rejects minting for a currency outside the admin tenant', async () => {
+    const manager = {
+      findOne: jest.fn(async (entity) => {
+        if (entity?.name === 'Currency') {
+          return { id: 'currency-1', tenantId: 'tenant-b', circulatingSupply: '500' };
+        }
+        return null;
+      }),
+      save: jest.fn(async (_entity, value) => value),
+      create: jest.fn((_entity, payload) => payload),
+    };
+
+    const dataSource = {
+      transaction: jest.fn(async (work) => work(manager)),
+      query: jest.fn(async () => [{ totalTransfers: '0' }]),
+    };
+
+    const service = new CurrencyService({}, {}, {}, dataSource);
+
+    await expect(
+      service.mintCurrencyToRecipient('currency-1', 'admin-1', 'tenant-a', {
+        recipientId: 'recipient-1',
+        amount: 10,
+        reason: 'Test',
+      }),
+    ).rejects.toThrow(ForbiddenException);
+  });
 });

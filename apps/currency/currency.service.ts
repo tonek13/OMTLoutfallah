@@ -6,11 +6,13 @@ import { Repository, DataSource } from 'typeorm';
 import { Tenant } from '../auth-service/src/modules/tenants/tenant.entity';
 import { Currency, CurrencyStatus } from './entities/currency.entity';
 import { Wallet } from './entities/wallet.entity';
+import { AuditLog } from './entities/audit-log.entity';
 import {
   UpdateTenantSettingsDto,
   CreateOrganizationCurrencyDto,
   AddOrganizationMemberDto,
   MintTokensDto,
+  MintCurrencyToRecipientDto,
 } from './dto/currency.dto';
 
 @Injectable()
@@ -195,6 +197,67 @@ export class CurrencyService {
 
       await manager.save(Currency, currency);
       return manager.save(Wallet, wallet);
+    });
+  }
+
+  async mintCurrencyToRecipient(
+    currencyId: string,
+    actorUserId: string,
+    actorTenantId: string,
+    dto: MintCurrencyToRecipientDto,
+  ): Promise<Wallet> {
+    return this.dataSource.transaction(async (manager) => {
+      const currency = await manager.findOne(Currency, {
+        where: { id: currencyId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!currency) throw new NotFoundException('Currency not found');
+      if (currency.tenantId !== actorTenantId) {
+        throw new ForbiddenException('Tenant admin access denied');
+      }
+
+      const wallet = await manager.findOne(Wallet, {
+        where: {
+          tenantId: actorTenantId,
+          currencyId,
+          userId: dto.recipientId,
+        },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!wallet) {
+        throw new NotFoundException('Recipient wallet not found for this currency');
+      }
+
+      const previousWalletBalance = Number(wallet.balance);
+      const previousCirculatingSupply = Number(currency.circulatingSupply);
+
+      wallet.balance = previousWalletBalance + dto.amount;
+      currency.circulatingSupply = previousCirculatingSupply + dto.amount;
+
+      const updatedCurrency = await manager.save(Currency, currency);
+      const updatedWallet = await manager.save(Wallet, wallet);
+
+      const auditLog = manager.create(AuditLog, {
+        tenantId: actorTenantId,
+        actorUserId,
+        eventType: 'currency.minted',
+        entityType: 'wallet',
+        entityId: updatedWallet.id,
+        payload: {
+          currencyId,
+          recipientId: dto.recipientId,
+          amount: dto.amount,
+          reason: dto.reason ?? null,
+          walletBalanceBefore: previousWalletBalance,
+          walletBalanceAfter: Number(updatedWallet.balance),
+          circulatingSupplyBefore: previousCirculatingSupply,
+          circulatingSupplyAfter: Number(updatedCurrency.circulatingSupply),
+        },
+      });
+
+      await manager.save(AuditLog, auditLog);
+
+      return updatedWallet;
     });
   }
 

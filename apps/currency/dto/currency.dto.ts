@@ -121,6 +121,36 @@ export class MintTokensDto {
   reason?: string;
 }
 
+export class MintCurrencyToRecipientDto {
+  @ApiProperty({ example: 'uuid-of-recipient-user' })
+  @IsString()
+  recipientId!: string;
+
+  @ApiProperty({ example: 500 })
+  @IsNumber()
+  @IsPositive()
+  @Type(() => Number)
+  amount!: number;
+
+  @ApiPropertyOptional({ example: 'Reward for top attendance' })
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+
+export class BurnCurrencyDto {
+  @ApiProperty({ example: 250 })
+  @IsNumber()
+  @IsPositive()
+  @Type(() => Number)
+  amount!: number;
+
+  @ApiPropertyOptional({ example: 'Expired rewards cleanup' })
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+
 export class TenantResponseDto {
   @ApiProperty({ example: '8e80e385-0cfa-4f90-b4ca-74f52ad648e2' })
   id!: string;
