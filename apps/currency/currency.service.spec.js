@@ -574,4 +574,67 @@ describe('CurrencyService tenant isolation', () => {
     expect(result.data).toHaveLength(1);
     expect(result.data[0].type).toBe('mint');
   });
+
+  it('returns aggregated currency panel stats with 30-day daily volume', async () => {
+    const currencyRepo = {
+      findOne: jest.fn(async () => ({
+        id: 'currency-1',
+        tenantId: 'tenant-a',
+        symbol: 'USD',
+      })),
+    };
+
+    const yesterday = new Date();
+    yesterday.setUTCHours(0, 0, 0, 0);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    const yesterdayKey = yesterday.toISOString().slice(0, 10);
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const todayKey = today.toISOString().slice(0, 10);
+
+    const walletRepo = {
+      createQueryBuilder: jest.fn(() => ({
+        where() { return this; },
+        andWhere() { return this; },
+        getCount: jest.fn(async () => 3),
+      })),
+    };
+
+    const dataSource = {
+      transaction: jest.fn(async (work) => work({})),
+      query: jest.fn(async (sql, params) => {
+        if (sql.includes('FROM audit_logs') && params[1] === 'currency.minted') {
+          return [{ total: '1250' }];
+        }
+        if (sql.includes('FROM audit_logs') && params[1] === 'currency.burned') {
+          return [{ total: '320' }];
+        }
+        if (sql.includes('COUNT(*)::int AS "totalTransfers"')) {
+          return [{ totalTransfers: '18' }];
+        }
+        if (sql.includes('COALESCE(SUM(t.amount), 0) AS volume')) {
+          return [
+            { day: yesterdayKey, volume: '250' },
+            { day: todayKey, volume: '90' },
+          ];
+        }
+        return [];
+      }),
+    };
+
+    const service = new CurrencyService({}, currencyRepo, walletRepo, dataSource);
+    const result = await service.getCurrencyPanelStats('currency-1', 'tenant-a');
+
+    expect(result.totalMinted).toBe(1250);
+    expect(result.totalBurned).toBe(320);
+    expect(result.totalTransfers).toBe(18);
+    expect(result.activeWallets).toBe(3);
+    expect(result.dailyVolume).toHaveLength(30);
+
+    const yesterdayPoint = result.dailyVolume.find((point) => point.date === yesterdayKey);
+    const todayPoint = result.dailyVolume.find((point) => point.date === todayKey);
+    expect(yesterdayPoint?.volume).toBe(250);
+    expect(todayPoint?.volume).toBe(90);
+  });
 });

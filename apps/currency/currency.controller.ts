@@ -33,6 +33,7 @@ import {
   UpdateCurrencyDto,
   CurrencyTransactionsQueryDto,
   CurrencyTransactionsResponseDto,
+  CurrencyPanelStatsResponseDto,
   TenantResponseDto,
   CurrencyResponseDto,
   CurrencyStatsResponseDto,
@@ -196,6 +197,27 @@ export class CurrencyController {
       currencyId,
       req.user.tenantId,
       query,
+    );
+  }
+
+  @Get('currencies/:id/stats')
+  @ApiOperation({ summary: 'Get aggregated currency panel stats (tenant admin only)' })
+  @ApiParam({ name: 'id', description: 'Currency ID', format: 'uuid' })
+  @ApiOkResponse({ type: CurrencyPanelStatsResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
+  @ApiForbiddenResponse({ description: 'Tenant admin access denied' })
+  @ApiNotFoundResponse({ description: 'Currency not found' })
+  getCurrencyPanelStats(
+    @Param('id') currencyId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    if (req.user.role !== UserRole.TENANT_ADMIN) {
+      throw new ForbiddenException('Tenant admin access denied');
+    }
+
+    return this.currencyService.getCurrencyPanelStats(
+      currencyId,
+      req.user.tenantId,
     );
   }
 

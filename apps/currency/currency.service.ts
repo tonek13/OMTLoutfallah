@@ -283,6 +283,39 @@ export class CurrencyService {
     };
   }
 
+  async getCurrencyPanelStats(
+    currencyId: string,
+    requesterTenantId: string,
+  ): Promise<{
+    totalMinted: number;
+    totalBurned: number;
+    totalTransfers: number;
+    activeWallets: number;
+    dailyVolume: Array<{ date: string; volume: number }>;
+  }> {
+    const currency = await this.currencyRepo.findOne({ where: { id: currencyId } });
+    if (!currency) throw new NotFoundException('Currency not found');
+    if (currency.tenantId !== requesterTenantId) {
+      throw new ForbiddenException('Tenant admin access denied');
+    }
+
+    const [totalMinted, totalBurned, totalTransfers, activeWallets, dailyVolume] = await Promise.all([
+      this.sumAuditAmounts(requesterTenantId, currencyId, 'currency.minted'),
+      this.sumAuditAmounts(requesterTenantId, currencyId, 'currency.burned'),
+      this.countTransfersForCurrency(requesterTenantId, currency.symbol),
+      this.countActiveWallets(requesterTenantId, currencyId),
+      this.buildDailyTransferVolume(requesterTenantId, currency.symbol, 30),
+    ]);
+
+    return {
+      totalMinted,
+      totalBurned,
+      totalTransfers,
+      activeWallets,
+      dailyVolume,
+    };
+  }
+
   async listCurrencies(tenantId: string): Promise<Currency[]> {
     return this.currencyRepo.find({ where: { tenantId } });
   }
@@ -593,6 +626,97 @@ export class CurrencyService {
 
       throw error;
     }
+  }
+
+  private async sumAuditAmounts(
+    tenantId: string,
+    currencyId: string,
+    eventType: 'currency.minted' | 'currency.burned',
+  ): Promise<number> {
+    try {
+      const rows = await this.dataSource.query(
+        `
+          SELECT COALESCE(SUM((a.payload ->> 'amount')::numeric), 0) AS total
+          FROM audit_logs a
+          WHERE a."tenantId" = $1
+            AND a."eventType" = $2
+            AND a.payload ->> 'currencyId' = $3
+        `,
+        [tenantId, eventType, currencyId],
+      );
+
+      return Number(rows?.[0]?.total ?? 0);
+    } catch (error: unknown) {
+      if (this.isMissingRelation(error, 'audit_logs')) {
+        return 0;
+      }
+
+      throw error;
+    }
+  }
+
+  private async countActiveWallets(tenantId: string, currencyId: string): Promise<number> {
+    return this.walletRepo
+      .createQueryBuilder('wallet')
+      .where('wallet.tenantId = :tenantId', { tenantId })
+      .andWhere('wallet.currencyId = :currencyId', { currencyId })
+      .andWhere('wallet.balance > 0')
+      .getCount();
+  }
+
+  private async buildDailyTransferVolume(
+    tenantId: string,
+    symbol: string,
+    days: number,
+  ): Promise<Array<{ date: string; volume: number }>> {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const dateKeys: string[] = [];
+    for (let i = days - 1; i >= 0; i -= 1) {
+      const date = new Date(today);
+      date.setUTCDate(today.getUTCDate() - i);
+      dateKeys.push(date.toISOString().slice(0, 10));
+    }
+
+    const startDate = dateKeys[0];
+    const endDateExclusive = new Date(today);
+    endDateExclusive.setUTCDate(today.getUTCDate() + 1);
+    const endDate = endDateExclusive.toISOString().slice(0, 10);
+
+    let rows: Array<{ day: string; volume: string | number }> = [];
+    try {
+      rows = await this.dataSource.query(
+        `
+          SELECT
+            DATE(t."createdAt")::text AS day,
+            COALESCE(SUM(t.amount), 0) AS volume
+          FROM transfers t
+          WHERE t."tenantId" = $1
+            AND t.currency::text = $2
+            AND t."createdAt" >= $3::date
+            AND t."createdAt" < $4::date
+          GROUP BY DATE(t."createdAt")
+        `,
+        [tenantId, symbol, startDate, endDate],
+      );
+    } catch (error: unknown) {
+      if (this.isMissingRelation(error, 'transfers')) {
+        return dateKeys.map((date) => ({ date, volume: 0 }));
+      }
+
+      throw error;
+    }
+
+    const volumeByDay = new Map<string, number>();
+    for (const row of rows) {
+      volumeByDay.set(String(row.day), Number(row.volume ?? 0));
+    }
+
+    return dateKeys.map((date) => ({
+      date,
+      volume: volumeByDay.get(date) ?? 0,
+    }));
   }
 
   private validateEarnRulesSchema(earnRules: unknown): void {

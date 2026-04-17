@@ -276,6 +276,31 @@ export class CurrencyTransactionsResponseDto {
   meta!: CurrencyTransactionsMetaDto;
 }
 
+export class CurrencyDailyVolumePointDto {
+  @ApiProperty({ example: '2026-04-17' })
+  date!: string;
+
+  @ApiProperty({ example: 1520.75 })
+  volume!: number;
+}
+
+export class CurrencyPanelStatsResponseDto {
+  @ApiProperty({ example: 12000 })
+  totalMinted!: number;
+
+  @ApiProperty({ example: 1500 })
+  totalBurned!: number;
+
+  @ApiProperty({ example: 842 })
+  totalTransfers!: number;
+
+  @ApiProperty({ example: 214 })
+  activeWallets!: number;
+
+  @ApiProperty({ type: CurrencyDailyVolumePointDto, isArray: true })
+  dailyVolume!: CurrencyDailyVolumePointDto[];
+}
+
 export class TenantResponseDto {
   @ApiProperty({ example: '8e80e385-0cfa-4f90-b4ca-74f52ad648e2' })
   id!: string;
