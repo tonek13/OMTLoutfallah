@@ -44,7 +44,7 @@ export class Currency {
   @Column({ type: 'jsonb', nullable: true })
   earnRules!: Record<string, unknown>;
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   expiryDays!: number | null;
 
   @Column({
